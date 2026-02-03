@@ -2,23 +2,23 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 start_kb = ReplyKeyboardMarkup(
     keyboard = [
-        [KeyboardButton(text = "👥 Choose group")],
-        [KeyboardButton(text = "🗓 Schedule")],
-        [KeyboardButton(text = "🔄 Update")]
+        [KeyboardButton(text = "👥 Выбери группу")],
+        [KeyboardButton(text = "🗓 График")],
+        [KeyboardButton(text = "🔄 Автообновление")]
     ],
     resize_keyboard = True,
-    input_field_placeholder= "Let`s Start!?"
+    input_field_placeholder= "Давай начнем!?"
 )
 
 ck_dtk_kb = ReplyKeyboardMarkup(
     keyboard = [
         [
-        KeyboardButton(text="CEK"),
-        KeyboardButton(text="DTEK"),
+        KeyboardButton(text="ЦЕК"),
+        KeyboardButton(text="ДТЭК"),
         ]
     ],
     resize_keyboard=True,
-    input_field_placeholder="Choose your supplier!"
+    input_field_placeholder="Выбери своего поставщика електроэнергии!"
 )
 
 group_kb = ReplyKeyboardMarkup(
@@ -43,5 +43,15 @@ group_kb = ReplyKeyboardMarkup(
         ]
     ],
     resize_keyboard=True,
-    input_field_placeholder="Choose your group!"
+    input_field_placeholder="Выбери группу!"
+)
+
+update_kb = ReplyKeyboardMarkup(
+    keyboard = [
+        [
+        KeyboardButton(text = "🟢 Включить"),
+        KeyboardButton(text = "🔴 Выключить")
+        ]
+    ],
+    resize_keyboard=True,
 )

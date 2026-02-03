@@ -13,11 +13,11 @@ def save(all_data):
     with open("data.json", "w", encoding="utf-8") as file:
         json.dump(all_data, file, ensure_ascii=False, indent=2)
     print("Operation saved successfully!")
-    print(all_data)
+    #print(all_data)
 
 def users_table(data):
     all_data = load()
-    print(data)
+    #print(data)
     id_list = []
 
     for user in all_data:
@@ -30,3 +30,10 @@ def users_table(data):
     else:
         all_data.append(data)
     save(all_data)
+
+def auto_update(user_id, status):
+    user_list = load()
+    user_dict = next((item for item in user_list if item["id"] == str(user_id)), None)
+    user_dict["notifications"] = status
+    #print(user_dict, status)
+    users_table(user_dict)
