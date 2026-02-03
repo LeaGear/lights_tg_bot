@@ -1,0 +1,18 @@
+# данные
+data.json
+
+# python
+__pycache__/
+*.pyc
+
+# окружение
+.venv/
+venv/
+
+# ide
+.vscode/
+.idea/
+
+.DS_Store
+
+.env
