@@ -1,6 +1,7 @@
 import requests
 from storage import load
 
+
 def schedule_constructor(frst_msg, schedule, message):
     good_graph = (f"{frst_msg}\n"
                   f"{message}\n")
@@ -32,7 +33,7 @@ def get_yasno_data(sup, group):
     #good_graph = (f"Поставщик: {sup}   Группа: {group}\n")
     graph = schedule_constructor(f"Постачальник: {sup}   Група: {group}\n",
                                  my_schedule, "Графік відключень на зараз: ")
-    graph1 = schedule_constructor("\n", my_schedule1, "Графік відключень на завтра: ")
+    graph1 = schedule_constructor("", my_schedule1, "Графік відключень на завтра: ")
     all_graph = graph + graph1
     #print(all_graph)
     return all_graph
@@ -60,5 +61,4 @@ def get_yasno(sup):
         data = response.json()
     else:
         pass
-
     return data
