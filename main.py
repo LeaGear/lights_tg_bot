@@ -4,7 +4,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from logic import get_yasno, get_yasno_data
 
 from os import getenv
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 
 from dotenv import find_dotenv, load_dotenv
 load_dotenv(find_dotenv())
@@ -37,7 +37,7 @@ async def check_api():
         for item in user_dict:
             try:
                 mess = get_yasno_data(item["sup"], item["group"])
-                await bot.send_message(item["id"], f"ОБНОВЛЕННЫЙ ГРАФИК!\n{mess}")
+                await bot.send_message(item["id"], f"❗️❗️УВАГА❗️ ОНОВЛЕННЯ ГРАФІКУ❗️❗\n{mess}")
             except Exception:
                 pass
 
@@ -46,12 +46,12 @@ async def check_api():
             users = json.load(f)
         user_dict = []
         for i in users:
-            if i["notifications"] and i["sup"] == "ДТЭК":
+            if i["notifications"] and i["sup"] == "ДТЕК":
                 user_dict.append(i)
         for item in user_dict:
             try:
                 mess = get_yasno_data(item["sup"], item["group"])
-                await bot.send_message(item["id"], f"ОБНОВЛЕННЫЙ ГРАФИК!\n{mess}")
+                await bot.send_message(item["id"], f"❗️❗️УВАГА❗️ ОНОВЛЕННЯ ГРАФІКУ❗️❗️\n{mess}")
             except Exception:
                 pass
 
