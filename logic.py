@@ -30,9 +30,9 @@ def get_yasno_data(sup, group):
     my_schedule1 = data[group]["tomorrow"]["slots"]
     #print(my_schedule)
     #good_graph = (f"Поставщик: {sup}   Группа: {group}\n")
-    graph = schedule_constructor(f"Поставщик: {sup}   Группа: {group}\n",
-                                 my_schedule, "График на данный момент: ")
-    graph1 = schedule_constructor("\n", my_schedule1, "А это график на завтра: ")
+    graph = schedule_constructor(f"Постачальник: {sup}   Група: {group}\n",
+                                 my_schedule, "Графік відключень на зараз: ")
+    graph1 = schedule_constructor("\n", my_schedule1, "Графік відключень на завтра: ")
     all_graph = graph + graph1
     #print(all_graph)
     return all_graph

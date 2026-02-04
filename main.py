@@ -18,16 +18,11 @@ scheduler = AsyncIOScheduler()
 
 dp.include_router(user_private_router)
 
-#with open("sched.json", "r") as f:
-#   last_api_state_cek = json.load(f)
-
 last_api_state_cek = {}
 last_api_state_dtek = {}
 
 async def check_api():
     global last_api_state_cek, last_api_state_dtek
-    #with open("sched.json", "r") as d:
-    #    current_data_cek = json.load(d)
 
     current_data_cek = get_yasno(303)
     current_data_dtek = get_yasno(301)
@@ -45,7 +40,7 @@ async def check_api():
                 await bot.send_message(item["id"], f"ОБНОВЛЕННЫЙ ГРАФИК!\n{mess}")
             except Exception:
                 pass
-    #print(users)
+
     if last_api_state_dtek and current_data_dtek != last_api_state_dtek:
         with open('data.json', 'r') as f:
             users = json.load(f)
@@ -64,7 +59,6 @@ async def check_api():
     last_api_state_dtek = current_data_dtek
 
 async def main():
-    #await bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
     scheduler.add_job(check_api, 'interval', minutes=5)
     scheduler.start()
 
