@@ -9,6 +9,11 @@ def load():
         print("Create new file!")
     return all_data
 
+def load_actual_schedule(file_name):
+    with open(file_name, "r", encoding="utf-8") as actual:
+        data = json.load(actual)
+    return data
+
 def save(all_data):
     with open("data.json", "w", encoding="utf-8") as file:
         json.dump(all_data, file, ensure_ascii=False, indent=2)

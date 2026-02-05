@@ -1,36 +1,27 @@
 import requests
-from storage import load
-
+from storage import load, load_actual_schedule
 
 def schedule_constructor(frst_msg, schedule, message):
     good_graph = (f"{frst_msg}\n"
                   f"{message}\n")
     for date in schedule:
         if date["type"] == 'Definite':
-            temp = (f"⚡{int(date['start']/60)}{':00'if date['start'] % 60 == 0 else':30' } - "
-                    f"{int(date['end']/60)}{':00'if date['end'] % 60 == 0 else':30' }\n")
+            start = int(date["start"])
+            end = int(date["end"])
+            temp = (f"⚡{'0'if (start/60) < 10 else''}{int(start/60)}{':00'if start % 60 == 0 else':30' } - "
+                    f"{'0'if (end/60) < 10 else''}{int(end/60)}{':00'if end % 60 == 0 else':30' }\n")
             good_graph += temp
     #print(good_graph)
     return good_graph
 
 def get_yasno_data(sup, group):
     if sup == "ЦЕК":
-        sup_dig = 303
+        data = load_actual_schedule("cek.json")
     else:
-        sup_dig = 301
+        data = load_actual_schedule("dtek.json")
 
-
-    url = "https://app.yasno.ua/api/blackout-service/public/shutdowns/regions/3/dsos/" + str(sup_dig) + "/planned-outages"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        data = response.json()
-    else:
-        pass
     my_schedule = data[group]["today"]["slots"]
     my_schedule1 = data[group]["tomorrow"]["slots"]
-    #print(my_schedule)
-    #good_graph = (f"Поставщик: {sup}   Группа: {group}\n")
     graph = schedule_constructor(f"Постачальник: {sup}   Група: {group}\n",
                                  my_schedule, "Графік відключень на зараз: ")
     graph1 = schedule_constructor("", my_schedule1, "Графік відключень на завтра: ")
@@ -46,19 +37,3 @@ def get_info(user):
     #print(user_dict)
     graph = get_yasno_data(user_dict["sup"], user_dict["group"])
     return graph
-
-def get_yasno(sup):
-    if sup == "ЦЕК":
-        sup_dig = 303
-    else:
-        sup_dig = 301
-
-    url = "https://app.yasno.ua/api/blackout-service/public/shutdowns/regions/3/dsos/" + str(
-        sup_dig) + "/planned-outages"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        data = response.json()
-    else:
-        pass
-    return data
