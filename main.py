@@ -1,6 +1,5 @@
 import asyncio
 import json
-import requests
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from os import getenv
@@ -9,7 +8,8 @@ from aiogram import Bot, Dispatcher
 from dotenv import find_dotenv, load_dotenv
 load_dotenv(find_dotenv())
 
-from logic import schedule_constructor
+from storage import load
+from logic import schedule_constructor, get_from_api
 from handlers.user_private import user_private_router
 
 bot = Bot(token=getenv("TOKEN"))
@@ -21,51 +21,18 @@ dp.include_router(user_private_router)
 
 async def check_api():
     print("Start")
-    try:
-        with open("cek.json", "r", encoding="utf-8") as last_data_cek:
-            last_api_state_cek = json.load(last_data_cek)
-            #print("dat", last_api_state_cek)
-        with open("dtek.json", "r", encoding="utf-8") as last_data_dtek:
-            last_api_state_dtek = json.load(last_data_dtek)
-            #print("dat2", last_api_state_dtek)
-    except FileNotFoundError:
-        print("Create new file!")
+    last_api_state_cek = load("cek.json")
+    last_api_state_dtek = load("dtek.json")
 
-    url = "https://app.yasno.ua/api/blackout-service/public/shutdowns/regions/3/dsos/303/planned-outages"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        data = response.json()
-        current_data_cek = data
-        #print(data)
-    else:
-        current_data_cek = {}
-        return "Yasno - DIE!"
-
-    with open("cek.json", "w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
-    print("CEK schedule saved successfully!")
-
-    url1 = "https://app.yasno.ua/api/blackout-service/public/shutdowns/regions/3/dsos/301/planned-outages"
-    response1 = requests.get(url1)
-
-    if response1.status_code == 200:
-        data = response1.json()
-        current_data_dtek = data
-        #print(data)
-    else:
-        current_data_dtek = {}
-        return "Yasno - DIE!"
-    with open("dtek.json", "w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
-    print("DTEK schedule saved successfully!")
+    current_data_cek = get_from_api(303, "cek.json")
+    current_data_dtek = get_from_api(301, "dtek.json")
 
     # Функция для обработки рассылки, чтобы не дублировать код
     async def notify_users(provider_name, current_data, last_state):
         # Проверяем: есть ли старое состояние и изменилось ли оно сейчас
         if last_state and current_data != last_state:
             try:
-                with open('data.json', 'r', encoding='utf-8') as f:
+                with open('users.json', 'r', encoding='utf-8') as f:
                     users = json.load(f)
             except (FileNotFoundError, json.JSONDecodeError):
                 return # Если файла нет или он битый, выходим

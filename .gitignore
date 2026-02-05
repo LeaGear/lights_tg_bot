@@ -1,5 +1,7 @@
 # данные
-data.json
+users.json
+cek.json
+dtek.json
 
 # python
 __pycache__/

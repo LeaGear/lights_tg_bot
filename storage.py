@@ -1,27 +1,22 @@
 import json
 
-def load():
+def load(file_name):
     all_data = []
     try:
-        with open("data.json", "r", encoding="utf-8") as file1:
+        with open(file_name, "r", encoding="utf-8") as file1:
             all_data = json.load(file1)
     except FileNotFoundError:
         print("Create new file!")
     return all_data
 
-def load_actual_schedule(file_name):
-    with open(file_name, "r", encoding="utf-8") as actual:
-        data = json.load(actual)
-    return data
-
-def save(all_data):
-    with open("data.json", "w", encoding="utf-8") as file:
+def save(all_data, file_name):
+    with open(file_name, "w", encoding="utf-8") as file:
         json.dump(all_data, file, ensure_ascii=False, indent=2)
     print("Operation saved successfully!")
     #print(all_data)
 
 def users_table(data):
-    all_data = load()
+    all_data = load("users.json")
     #print(data)
     id_list = []
 
@@ -34,10 +29,10 @@ def users_table(data):
         all_data.append(data)
     else:
         all_data.append(data)
-    save(all_data)
+    save(all_data, "users.json")
 
 def auto_update(user_id, status):
-    user_list = load()
+    user_list = load("users.json")
     user_dict = next((item for item in user_list if item["id"] == str(user_id)), None)
     user_dict["notifications"] = status
     #print(user_dict, status)
