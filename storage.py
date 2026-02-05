@@ -31,9 +31,10 @@ def users_table(data):
         all_data.append(data)
     save(all_data, "users.json")
 
-def auto_update(user_id, status):
+
+'''def auto_update(user_id, status):
     user_list = load("users.json")
     user_dict = next((item for item in user_list if item["id"] == str(user_id)), None)
     user_dict["notifications"] = status
     #print(user_dict, status)
-    users_table(user_dict)
+    users_table(user_dict)'''

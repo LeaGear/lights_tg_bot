@@ -15,19 +15,26 @@ def schedule_constructor(frst_msg, schedule, message):
     return good_graph
 
 def get_yasno_data(sup, group):
+    end_version = ""
     if sup == "ЦЕК":
         data = load("cek.json")
     else:
         data = load("dtek.json")
 
-    my_schedule = data[group]["today"]["slots"]
-    my_schedule1 = data[group]["tomorrow"]["slots"]
-    graph = schedule_constructor(f"Постачальник: {sup}   Група: {group}\n",
-                                 my_schedule, "Графік відключень на зараз: ")
-    graph1 = schedule_constructor("", my_schedule1, "Графік відключень на завтра: ")
-    all_graph = graph + graph1
-    #print(all_graph)
-    return all_graph
+    for i in group:
+        my_schedule = data[i]["today"]["slots"]
+        my_schedule1 = data[i]["tomorrow"]["slots"]
+        graph = schedule_constructor(f"Постачальник: {sup}   Група: {i}\n",
+                                     my_schedule, "Графік відключень на зараз: ")
+        if my_schedule1:
+            graph1 = schedule_constructor("", my_schedule1,
+                                          f"Попередній графік відключень на завтра: ")
+        else:
+            graph1 = ("\nНемає попереднього графіку на завтра!\n")
+        all_graph = graph + graph1 + "═"*30 + "\n"
+        end_version += all_graph
+    #print(end_version)
+    return end_version
 
 def get_info(user):
     #print(user)
@@ -46,10 +53,11 @@ def get_from_api(provider, file_name):
     if response.status_code == 200:
         data = response.json()
         # print(data)
+        save(data, file_name)
+        # print(data)
+        print(f"{'CEK' if provider == 301 else 'DTEK'} schedule saved successfully!")
+        return data
     else:
-        return "Yasno - DIE!"
+        return load(file_name)
 
-    save(data, file_name)
-    print(data)
-    print(f"{'CEK' if provider == 301 else'DTEK'} schedule saved successfully!")
-    return data
+

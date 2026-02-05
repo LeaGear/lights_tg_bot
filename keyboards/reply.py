@@ -3,8 +3,7 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 start_kb = ReplyKeyboardMarkup(
     keyboard = [
         [KeyboardButton(text = "👥 Обери групу")],
-        [KeyboardButton(text = "🗓 Графік")],
-        [KeyboardButton(text = "🔄 Автооновлення")]
+        [KeyboardButton(text = "🗓 Графік")]
     ],
     resize_keyboard = True,
     input_field_placeholder= "Розпочнемо!?"
@@ -40,18 +39,11 @@ group_kb = ReplyKeyboardMarkup(
         KeyboardButton(text="5.2"),
         KeyboardButton(text="6.1"),
         KeyboardButton(text="6.2"),
+        ],
+        [
+        KeyboardButton(text="Далі 👉"),
         ]
     ],
     resize_keyboard=True,
     input_field_placeholder="Обери групу!"
-)
-
-update_kb = ReplyKeyboardMarkup(
-    keyboard = [
-        [
-        KeyboardButton(text = "🟢 Увімкнути"),
-        KeyboardButton(text = "🔴 Вимкнути")
-        ]
-    ],
-    resize_keyboard=True,
 )

@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from os import getenv
@@ -31,24 +30,21 @@ async def check_api():
     async def notify_users(provider_name, current_data, last_state):
         # Проверяем: есть ли старое состояние и изменилось ли оно сейчас
         if last_state and current_data != last_state:
-            try:
-                with open('users.json', 'r', encoding='utf-8') as f:
-                    users = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError):
-                return # Если файла нет или он битый, выходим
-
+            users = load("users.json")
             # Фильтруем пользователей, которым нужно обновление по этому провайдеру
             for user in users:
-                if user.get("notifications") and user.get("sup") == provider_name:
-                    try:
-                        # Формируем график (здесь можно еще оптимизировать, передавая уже скачанные данные)
-                        mess = schedule_constructor(f"Група {user['group']} {provider_name}",
-                                                    current_data[user["group"]]["today"]["slots"],'')
-                        await bot.send_message(user["id"], f"❗️❗️УВАГА❗️ ОНОВЛЕННЯ ГРАФІКУ {provider_name}❗️❗\n{mess}")
-                        # Небольшая пауза, чтобы Telegram не забанил за спам
-                        await asyncio.sleep(0.05)
-                    except Exception as e:
-                        print(f"Ошибка отправки пользователю {user['id']}: {e}")
+                if user.get("sup") == provider_name:
+                    for group in user["group"]:
+                        try:
+                            # Формируем график (здесь можно еще оптимизировать, передавая уже скачанные данные)
+                            mess = schedule_constructor(f"Група {group} {provider_name}",
+                                                        current_data[group]["today"]["slots"],'')
+                            await bot.send_message(user["id"], f"❗️❗️УВАГА❗️ ОНОВЛЕННЯ ГРАФІКУ "
+                                                               f"{provider_name}❗️❗\n{mess}")
+                            # Небольшая пауза, чтобы Telegram не забанил за спам
+                            await asyncio.sleep(0.05)
+                        except Exception as e:
+                            print(f"Ошибка отправки пользователю {user['id']}: {e}")
 
     # Запускаем проверку для обоих провайдеров
     await notify_users("ЦЕК", current_data_cek, last_api_state_cek)
