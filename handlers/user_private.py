@@ -76,7 +76,7 @@ async def finish_group_selection(message: types.Message, state: FSMContext):
         await message.answer("Ти не обрав жодної групи! Будь ласка, обери хоча б одну.")
         return
 
-    # Формируем итоговый словарь (теперь с списком)
+    # Формируем итоговый словарь (теперь сo списком)
     final_data = {
         "id": str(message.from_user.id),
         "sup": user_data["sup"],
@@ -90,19 +90,6 @@ async def finish_group_selection(message: types.Message, state: FSMContext):
         reply_markup=start_kb
     )
     await state.clear()
-'''@user_private_router.message(Add_user.choose_group, F.text.in_(groups))
-async def choose_group(message : types.Message, state: FSMContext):
-    user_data = await state.get_data()
-    final_data = {
-        "id": str(message.from_user.id),
-        "sup": user_data["sup"],
-        "group": message.text
-    }
-    print(final_data)
-    users_table(final_data)
-    await message.answer("Дані отримано, я тебе запамʼятав!",
-                         reply_markup=start_kb)
-    await state.clear()'''
 
 @user_private_router.message()
 async def input_error(message : types.Message):

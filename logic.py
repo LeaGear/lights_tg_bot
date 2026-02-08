@@ -1,5 +1,6 @@
 import requests
 from storage import load, save
+from database import Session, User
 
 def schedule_constructor(frst_msg, schedule, message):
     good_graph = (f"{frst_msg}\n"
@@ -31,19 +32,23 @@ def get_yasno_data(sup, group):
                                           f"Попередній графік відключень на завтра: ")
         else:
             graph1 = ("\nНемає попереднього графіку на завтра!\n")
-        all_graph = graph + graph1 + "═"*30 + "\n"
+        all_graph = graph + graph1 + "═"*25 + "\n"
         end_version += all_graph
     #print(end_version)
     return end_version
 
-def get_info(user):
-    #print(user)
-    user_list = load("users.json")
-    #print(user_list)
-    user_dict = next((item for item in user_list if item["id"] == str(user)), None)
-    #print(user_dict)
-    graph = get_yasno_data(user_dict["sup"], user_dict["group"])
-    return graph
+def get_info(user_id):
+    session = Session()
+    user = session.query(User).filter_by(id=str(user_id)).first()
+    #print(user.sup, user.group)
+    session.close()
+
+    if not user:
+        return "Ви ще не обрали групу."
+
+    # user.groups — это уже готовый список!
+    results = get_yasno_data(user.sup, user.groups)
+    return results
 
 def get_from_api(provider, file_name):
 
@@ -52,11 +57,15 @@ def get_from_api(provider, file_name):
 
     if response.status_code == 200:
         data = response.json()
+        if data["1.1"]["today"]["status"] == "EmergencyShutdowns":
+            print("EmergencyShutdowns")
+            return data
         # print(data)
-        save(data, file_name)
-        # print(data)
-        print(f"{'CEK' if provider == 301 else 'DTEK'} schedule saved successfully!")
-        return data
+        else:
+            save(data, file_name)
+            # print(data)
+            print(f"{'CEK' if provider == 301 else 'DTEK'} schedule saved successfully!")
+            return data
     else:
         return load(file_name)
 

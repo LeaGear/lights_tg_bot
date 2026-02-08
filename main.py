@@ -7,9 +7,10 @@ from aiogram import Bot, Dispatcher
 from dotenv import find_dotenv, load_dotenv
 load_dotenv(find_dotenv())
 
-from storage import load
+from storage import load, get_all_users
 from logic import schedule_constructor, get_from_api
 from handlers.user_private import user_private_router
+from database import Session, User
 
 bot = Bot(token=getenv("TOKEN"))
 dp = Dispatcher()
@@ -29,22 +30,64 @@ async def check_api():
     # Функция для обработки рассылки, чтобы не дублировать код
     async def notify_users(provider_name, current_data, last_state):
         # Проверяем: есть ли старое состояние и изменилось ли оно сейчас
-        if last_state and current_data != last_state:
-            users = load("users.json")
-            # Фильтруем пользователей, которым нужно обновление по этому провайдеру
-            for user in users:
-                if user.get("sup") == provider_name:
-                    for group in user["group"]:
-                        try:
-                            # Формируем график (здесь можно еще оптимизировать, передавая уже скачанные данные)
-                            mess = schedule_constructor(f"Група {group} {provider_name}",
-                                                        current_data[group]["today"]["slots"],'')
-                            await bot.send_message(user["id"], f"❗️❗️УВАГА❗️ ОНОВЛЕННЯ ГРАФІКУ "
-                                                               f"{provider_name}❗️❗\n{mess}")
-                            # Небольшая пауза, чтобы Telegram не забанил за спам
-                            await asyncio.sleep(0.05)
-                        except Exception as e:
-                            print(f"Ошибка отправки пользователю {user['id']}: {e}")
+
+        if not last_state or current_data == last_state:
+            return
+
+        users = get_all_users()
+        session = Session()
+        # Фильтруем пользователей, которым нужно обновление по этому провайдеру
+        for user_obj in users:
+            user = session.get(User, user_obj.id)
+
+            if user.sup == provider_name and user.groups:
+                send_update = False
+                is_emergency = False
+                all_messages = []
+
+                for group in user.groups:
+                    # Проверяем статус именно ЭТОЙ группы
+                    new_status = current_data.get(group, {}).get("today", {}).get("status")
+                    old_status = user.last_status
+
+                    if new_status == "EmergencyShutdowns":
+                        is_emergency = True
+                        # При экстренных шлем старый график как ориентир
+                        if old_status != "EmergencyShutdowns":
+                            send_update = True
+                            mess = schedule_constructor(
+                                f"Група {group} {provider_name}",
+                                last_state[group]["today"]["slots"],
+                                '')
+                            all_messages.append(mess)
+
+                    elif new_status != old_status:
+                        # Статус изменился (например, с Emergency на Normal)
+                        send_update = True
+                        slots = current_data[group]["today"]["slots"]
+                        all_messages.append(schedule_constructor(f"Група {group}",
+                                                                 slots, ''))
+
+                if send_update and all_messages:
+                    # Собираем финальный текст
+                    user.last_status = "EmergencyShutdowns" if is_emergency else "Normal"
+                    separator = "\n" + "━" * 20 + "\n"
+                    final_text = separator.join(all_messages)
+
+                    header = "🚨 <b>ЕКСТРЕНІ ВІДКЛЮЧЕННЯ</b> 🚨\nГрафіки не діють!\nОстанній актуальний графік!" if is_emergency \
+                        else f"❗️❗️ <b>УВАГА! ОНОВЛЕННЯ ГРАФІКУ {provider_name}</b> ❗️❗"
+
+                    try:
+                        await bot.send_message(
+                            user.id,
+                            f"{header}\n\n{final_text}",
+                            parse_mode="HTML"
+                        )
+                        session.commit()
+                        await asyncio.sleep(0.05)  # Защита от спам-фильтра Telegram
+                    except Exception as e:
+                        print(f"Ошибка отправки пользователю {user.id}: {e}")
+        session.close()
 
     # Запускаем проверку для обоих провайдеров
     await notify_users("ЦЕК", current_data_cek, last_api_state_cek)

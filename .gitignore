@@ -2,6 +2,7 @@
 users.json
 cek.json
 dtek.json
+users.db
 
 # python
 __pycache__/

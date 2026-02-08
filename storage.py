@@ -1,4 +1,30 @@
 import json
+from database import Session, User
+
+
+
+def users_table(data):
+    session = Session()
+    uid = data["id"]
+    user = session.query(User).filter(User.id == uid).first()
+
+    if user:
+        user.sup = data["sup"]
+        user.groups = data["group"]
+        user.notifications = data["notifications"]
+    else:
+        new_user = User(id=uid, sup=data["sup"], groups=data["group"], notifications=data["notifications"])
+        session.add(new_user)
+
+    session.commit()
+    session.close()
+
+def get_all_users():
+    session = Session()
+    users = session.query(User).all()
+    session.close()
+    return users
+
 
 def load(file_name):
     all_data = []
@@ -14,27 +40,3 @@ def save(all_data, file_name):
         json.dump(all_data, file, ensure_ascii=False, indent=2)
     print("Operation saved successfully!")
     #print(all_data)
-
-def users_table(data):
-    all_data = load("users.json")
-    #print(data)
-    id_list = []
-
-    for user in all_data:
-        id_list.append(user["id"])
-
-    if data["id"] in id_list:
-        del_rec = id_list.index(data["id"])
-        all_data.pop(del_rec)
-        all_data.append(data)
-    else:
-        all_data.append(data)
-    save(all_data, "users.json")
-
-
-'''def auto_update(user_id, status):
-    user_list = load("users.json")
-    user_dict = next((item for item in user_list if item["id"] == str(user_id)), None)
-    user_dict["notifications"] = status
-    #print(user_dict, status)
-    users_table(user_dict)'''
