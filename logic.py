@@ -18,9 +18,9 @@ def schedule_constructor(frst_msg, schedule, message):
 def get_yasno_data(sup, group):
     end_version = ""
     if sup == "ЦЕК":
-        data = load("cek.json")
+        data = load("data/cek.json")
     else:
-        data = load("dtek.json")
+        data = load("data/dtek.json")
 
     for i in group:
         my_schedule = data[i]["today"]["slots"]
@@ -31,10 +31,13 @@ def get_yasno_data(sup, group):
             graph1 = schedule_constructor("", my_schedule1,
                                           f"Попередній графік відключень на завтра: ")
         else:
-            graph1 = ("\nНемає попереднього графіку на завтра!\n")
-        all_graph = graph + graph1 + "═"*25 + "\n"
+            graph1 = "\nНемає попереднього графіку на завтра!\n"
+        all_graph = graph + graph1 + "═"*20 + "\n"
         end_version += all_graph
     #print(end_version)
+    last  = f"\n\n🔔Дата оновлення: {data["1.1"]["today"]["date"][:10]}"
+    end_version += last
+
     return end_version
 
 def get_info(user_id):
@@ -46,9 +49,15 @@ def get_info(user_id):
     if not user:
         return "Ви ще не обрали групу."
 
-    # user.groups — это уже готовый список!
-    results = get_yasno_data(user.sup, user.groups)
-    return results
+    if user.last_status == "EmergencyShutdowns":
+        header = "🚨 ЕКСТРЕНІ ВІДКЛЮЧЕННЯ 🚨\nГрафіки не діють!\nОстанній актуальний графік:\n\n"
+        results = header + get_yasno_data(user.sup, user.groups)
+        return results
+    else:
+        header = "️⚡⚡️Ось твій графік!⚡️⚡️\n"
+        # user.groups — это уже готовый список!
+        results = header + get_yasno_data(user.sup, user.groups)
+        return results
 
 def get_from_api(provider, file_name):
 

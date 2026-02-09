@@ -4,7 +4,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 from logic import get_info
-from storage import users_table
+from storage import users_table, load, save
 
 from keyboards.reply import start_kb, group_kb, ck_dtk_kb
 user_private_router = Router()
@@ -30,10 +30,9 @@ async def choose_sup(message : types.Message, state: FSMContext):
 
 @user_private_router.message(F.text == "🗓 Графік")
 async def schedule(message : types.Message):
-    await message.answer("🗓Ну що ж, подивимось!🗓",
-                         reply_markup=start_kb)
+    #await message.answer("🗓Ну що ж, подивимось!🗓",reply_markup=start_kb)
     graph = get_info(message.from_user.id)
-    await message.answer(graph)
+    await message.answer(graph, reply_markup=start_kb)
 
 @user_private_router.message(Add_user.choose_sup, F.text.in_(["ЦЕК", "ДТЕК"]))
 async def sup_save(message : types.Message, state: FSMContext):
@@ -83,7 +82,11 @@ async def finish_group_selection(message: types.Message, state: FSMContext):
         "group": selected_groups,  # ТЕПЕРЬ ЭТО СПИСОК
         "notifications": True
     }
+    list_of_all_users = load("data/list_of_all_users.txt")
+    if not str(message.from_user.id) in list_of_all_users:
+        list_of_all_users.append(str(message.from_user.id))
 
+    save(list_of_all_users, "data/list_of_all_users.txt")
     users_table(final_data)
     await message.answer(
         f"Дані збережено! Твої групи: {', '.join(selected_groups)}",

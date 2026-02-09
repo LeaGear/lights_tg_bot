@@ -1,8 +1,10 @@
 # данные
-users.json
-cek.json
-dtek.json
-users.db
+data/cek.json
+data/dtek.json
+data/users.db
+data/message.txt
+data/list_of_all_users.txt
+data
 
 # python
 __pycache__/
@@ -18,4 +20,4 @@ venv/
 
 .DS_Store
 
-.env
+data/.env
