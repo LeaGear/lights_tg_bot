@@ -2,7 +2,7 @@ import json
 from sqlalchemy import Column, String, Boolean, JSON, select
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncConnection
 
 from data.config import DB_URL
 
@@ -42,6 +42,7 @@ class User(Base):
 # 4. Асинхронная инициализация базы
 async def init_db():
     async with engine.begin() as conn:
+        conn:AsyncConnection
         # Используем run_sync для синхронной команды создания таблиц
         await conn.run_sync(Base.metadata.create_all)
 

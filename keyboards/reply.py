@@ -11,6 +11,9 @@ start_kb = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="📋 Мої групи"),
             KeyboardButton(text="❌ Видалення групи")
+        ],
+        [
+            KeyboardButton(text = "⛔️ Видалити усі групи")
         ]
     ],
     resize_keyboard = True,

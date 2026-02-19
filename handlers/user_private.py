@@ -5,11 +5,11 @@ from aiogram.fsm.context import FSMContext
 
 from logic import get_info
 from storage import users_table, load, save, group_from_user
-from database import del_group_from_db
+from database import del_group_from_db, session_factory, select, User
 from keyboards.reply import start_kb, group_kb, ck_dtk_kb, get_keyboard
-user_private_router = Router()
+from data.config import GROUPS
 
-groups = ["1.1", "1.2", "2.1", "2.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2", "6.1", "6.2",]
+user_private_router = Router()
 
 class AddUser(StatesGroup):
     choose_sup = State()
@@ -27,10 +27,13 @@ async def start_cmd(message : types.Message):
 @user_private_router.message(F.text == "📋 Мої групи")
 async def schedule(message : types.Message):
     groups_for_watching = await group_from_user(message.from_user.id)
-    mess = "📜Ось список груп за якими ти слідкуєш!📜\n\n"
-    for i in groups_for_watching:
-        mess += f"{i[0]}-{i[1]}, "
-    await message.answer(mess[:-2], reply_markup=start_kb)
+    if groups_for_watching:
+        mess = "📜Ось список груп за якими ти слідкуєш!📜\n\n"
+        for i in groups_for_watching:
+            mess += f"{i[0]}-{i[1]}, "
+        await message.answer(mess[:-2], reply_markup=start_kb)
+    else:
+        await message.answer("🟡 Ти не обрав жодної групи 🟡")
 
 
 @user_private_router.message(F.text == "🗓 Графік")
@@ -52,7 +55,7 @@ async def sup_save(message : types.Message, state: FSMContext):
     await state.set_state(AddUser.choose_group)
 
 
-@user_private_router.message(AddUser.choose_group, F.text.in_(groups))
+@user_private_router.message(AddUser.choose_group, F.text.in_(GROUPS))
 async def choose_group(message: types.Message, state: FSMContext):
     # 1. Берем текущие данные из FSM
     user_data = await state.get_data()
@@ -116,10 +119,10 @@ async def finish_group_selection(message: types.Message, state: FSMContext):
     )
     await state.clear()
 
-    list_of_all_users = load("data/list_of_all_users.txt")
+    list_of_all_users = await load("data/list_of_all_users.txt")
     if not str(message.from_user.id) in list_of_all_users:
         list_of_all_users.append(str(message.from_user.id))
-    save(list_of_all_users, "data/list_of_all_users.txt")
+    await save(list_of_all_users, "data/list_of_all_users.txt")
 
 @user_private_router.message(F.text == "❌ Видалення групи")
 async def del_group(message: types.Message, state: FSMContext):
@@ -155,6 +158,15 @@ async def del_one_group(message: types.Message, state: FSMContext):
         await state.clear()  # Сбрасываем состояние
     else:
         await message.answer("Будь ласка, обери групу за допомогою кнопок.")
+
+@user_private_router.message(F.text == "⛔️ Видалити усі групи")
+async def del_all_groups(message: types.Message):
+    async with session_factory() as session:
+        result = await session.execute(select(User).where(User.id == str(message.from_user.id)))
+        user = result.scalar_one_or_none()
+        user.groups = []
+        await session.commit()
+    await message.answer("Усі групи видалені!")
 
 @user_private_router.message()
 async def input_error(message : types.Message):

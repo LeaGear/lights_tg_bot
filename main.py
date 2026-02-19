@@ -1,24 +1,26 @@
 import asyncio
+import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot, Dispatcher
+from datetime import datetime
 
-
-from data.config import TOKEN, PROVIDERS, REFRESH_INTERVAL, RATE_LIMIT
+from data.config import TOKEN, PROVIDERS, REFRESH_INTERVAL, RATE_LIMIT, REFRESH_INTERVAL_ALERT, KYIV_TZ
 from auto_update import update
-from storage import load, save
+from storage import load, save, get_all_users
 from logic import get_from_api, get_yasno_data
 from database import session_factory, User  # Импортируем из твоего файла базы
-from sqlalchemy import select
+from sqlalchemy import select, update
 from handlers.user_private import user_private_router
 from database import init_db
+from alert import alert_groups_list
+
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 scheduler = AsyncIOScheduler()
 
 dp.include_router(user_private_router)
-
 
 async def noti(provider, lst, cur):
     async with session_factory() as session:
@@ -29,32 +31,37 @@ async def noti(provider, lst, cur):
 
         if cur["1.1"]["today"]["status"] == "EmergencyShutdowns":
             # Получаем пользователей, которым нужно сменить статус
-            result = await session.execute(
-                select(User).where(User.last_status == "Normal")
+            await session.execute(
+                update(User)
+                .where(User.last_status == "Normal")
+                .values(last_status="EmergencyShutdowns")
             )
-            users = result.scalars().all()
-            for user in users:
+            await session.commit()
+
+            result = await session.execute(
+                select(User.id, User.groups).where(User.last_status == "EmergencyShutdowns")
+            )
+            users_to_notify = result.all()
+
+            for user in users_to_notify:
                 # Отправляем сообщение
                 header = "🚨 ЕКСТРЕНІ ВІДКЛЮЧЕННЯ 🚨\nГрафіки не діють!\nОстанній актуальний графік:\n\n"
-                results = header + get_yasno_data(user.groups)
+                results = header + await get_yasno_data(user.groups)
                 try:
                     await bot.send_message(user.id, results)
                     # МЕНЯЕМ ДАННЫЕ прямо в объекте
-                    user.last_status = "EmergencyShutdowns"
                 except Exception as e:
+                    logging.error(f"Failed to send message to {user.id}: {e}", exc_info=True)
                     print(f"Ошибка отправки пользователю {user.id}: {e}")
             # КОММИТИМ изменения в этом же файле
-            await session.commit()
             return
 
-        result = await session.execute(
-            select(User).where(User.last_status == "EmergencyShutdowns")
+        await session.execute(
+            update(User)
+            .where(User.last_status == "EmergencyShutdowns")
+            .values(last_status="Normal")
         )
-        users = result.scalars().all()
-        for user in users:
-            user.last_status = "Normal"
         await session.commit()
-        # print(f"LAst status = normal and update {provider}")
 
         notify = await update(provider, lst, cur)
         for list_user_and_update_message in notify:
@@ -65,12 +72,13 @@ async def noti(provider, lst, cur):
                 )
                 await asyncio.sleep(RATE_LIMIT)
             except Exception as e:
+                logging.error(f"Failed to send message to {list_user_and_update_message[0]}: {e}", exc_info=True)
                 print(f"Ошибка отправки пользователю {list_user_and_update_message[0]}: {e}")
 
 async def check_api():
     print("Start")
-    last_api_state_cek = load(PROVIDERS["CEK"]["file"])
-    last_api_state_dtek = load(PROVIDERS["DTEK"]["file"])
+    last_api_state_cek = await load(PROVIDERS["CEK"]["file"])
+    last_api_state_dtek = await load(PROVIDERS["DTEK"]["file"])
 
     current_data_cek = await get_from_api(PROVIDERS["CEK"]["code"], PROVIDERS["CEK"]["file"])
     current_data_dtek = await get_from_api(PROVIDERS["DTEK"]["code"], PROVIDERS["DTEK"]["file"])
@@ -80,17 +88,39 @@ async def check_api():
     if current_data_cek["1.1"]["today"]["status"] == "EmergencyShutdowns":
         print("EmergencyShutdowns")
     else:
-        save(current_data_cek, PROVIDERS["CEK"]["file"])
+        await save(current_data_cek, PROVIDERS["CEK"]["file"])
 
     await noti("ДТЕК", last_api_state_dtek, current_data_dtek)
     if current_data_dtek["1.1"]["today"]["status"] == "EmergencyShutdowns":
         print("EmergencyShutdowns")
     else:
-        save(current_data_dtek, PROVIDERS["DTEK"]["file"])
+        await save(current_data_dtek, PROVIDERS["DTEK"]["file"])
 
+async def alert_for_user():
+    users = await get_all_users()
+    alert_groups = await alert_groups_list()
+    header = f"⚠️⚠️Нагадую!⚠️⚠️ \nЧерез 15 хвилин буде відключення вашої групи/груп:\n\n"
 
+    for user in users:
+        comparisons = []
+        message = header
+        if user.last_status == "EmergencyShutdowns":
+            continue
+        #comparisons = list(set(user.groups) & set(alert_groups))
+        for i in user.groups:
+            for j in alert_groups:
+                if i == j: comparisons.append(i)
+        if comparisons:
+            for gp in comparisons:
+                message += f"{gp[0]} {gp[1]}\n"
+            try:
+                await bot.send_message(user.id, message)
+            except Exception as e:
+                logging.error(f"Failed to send message to {user.id}: {e}", exc_info=True)
+            await asyncio.sleep(RATE_LIMIT)
 
 async def announcement_for_all_users():
+    #as123()
     print("Start announcement for all users")
     try:
         with open("data/message.txt", "r", encoding="utf-8") as f:
@@ -98,17 +128,19 @@ async def announcement_for_all_users():
     except FileNotFoundError:
         print("Файл data/message.txt не найден!")
         return
-    print(message)
-    list_of_all_users = load("data/list_of_all_users.txt")
+    #print(message)
+    list_of_all_users = await load("data/list_of_all_users.txt")
 
     for user in list_of_all_users:
         try:
             await bot.send_message(user, message)
         except Exception as e:
+            logging.error(f"Failed to send message to {user}: {e}", exc_info=True)
             print(f"Ошибка отправки пользователю {user}: {e}")
 
         await asyncio.sleep(RATE_LIMIT)
-
+    await save(message, f"data/updates/message_{datetime.now(KYIV_TZ).strftime('%d_%m_%Y_%H_%m_%s')}.txt")
+    open("data/message.txt", "w").close()
     print("End announcement for all users")
 
 
@@ -123,6 +155,7 @@ async def main():
     except Exception as e:
         print(f"Ошибка при старте: {e}")
 
+    scheduler.add_job(alert_for_user, 'interval', minutes=REFRESH_INTERVAL_ALERT)
     scheduler.add_job(check_api, 'interval', minutes=REFRESH_INTERVAL)
     scheduler.start()
 
