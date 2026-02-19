@@ -63,7 +63,7 @@ async def noti(provider, lst, cur):
                     list_user_and_update_message[0],
                     list_user_and_update_message[1]
                 )
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(RATE_LIMIT)
             except Exception as e:
                 print(f"Ошибка отправки пользователю {list_user_and_update_message[0]}: {e}")
 
