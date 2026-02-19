@@ -147,7 +147,7 @@ async def announcement_for_all_users():
 
 async def main():
     await init_db()
-    #await announcement_for_all_users()
+    await announcement_for_all_users()
     try:
         print("Первичный сбор данных...")
         await check_api()
