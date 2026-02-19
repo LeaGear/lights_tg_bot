@@ -1,8 +1,9 @@
-import requests
+import httpx
 from datetime import datetime
 from sqlalchemy import select
 
-from storage import load, save
+from data.config import PROVIDERS
+from storage import load
 from database import session_factory, User
 
 def schedule_constructor(frst_msg, schedule, message):
@@ -12,28 +13,29 @@ def schedule_constructor(frst_msg, schedule, message):
         if date["type"] == 'Definite':
             start = int(date["start"])
             end = int(date["end"])
-            temp = (f"⚡{'0'if (start/60) < 10 else''}{int(start/60)}{':00'if start % 60 == 0 else':30' } - "
+            temp = (f"⚡ з {'0'if (start/60) < 10 else''}{int(start/60)}{':00'if start % 60 == 0 else':30' } до "
                     f"{'0'if (end/60) < 10 else''}{int(end/60)}{':00'if end % 60 == 0 else':30' }\n")
             good_graph += temp
     #print(good_graph)
     return good_graph
 
-def get_yasno_data(groups_list):
+def get_yasno_data(groups_list, data_cek = None, data_dtek = None):
+
+    if data_cek is None: data_cek = load(PROVIDERS["CEK"]["file"])
+    if data_dtek is None: data_dtek = load(PROVIDERS["DTEK"]["file"])
     end_version = ""
     for i in groups_list:
         sup = i[0]
         group = i[1]
-        if sup == "ЦЕК":
-            data = load("data/cek.json")
-        else:
-            data = load("data/dtek.json")
+        # Используем переданные словари
+        data = data_cek if sup == "ЦЕК" else data_dtek
 
-        my_schedule = data[group]["today"]["slots"]
-        my_schedule1 = data[group]["tomorrow"]["slots"]
+        my_schedule_today = data[group]["today"]["slots"]
+        my_schedule_tomorrow = data[group]["tomorrow"]["slots"]
         graph = schedule_constructor(f"💡Постачальник: {sup}   Група: {group}💡\n",
-                                     my_schedule, "Графік відключень на зараз: ")
-        if my_schedule1:
-            graph1 = schedule_constructor("", my_schedule1,
+                                     my_schedule_today, "Графік відключень на cьогодні: ")
+        if my_schedule_tomorrow:
+            graph1 = schedule_constructor("", my_schedule_tomorrow,
                                           f"Попередній графік відключень на завтра: ")
         else:
             graph1 = "\nНемає попереднього графіку на завтра!\n"
@@ -41,8 +43,8 @@ def get_yasno_data(groups_list):
         end_version += all_graph
         #print(end_version)
     time = data["1.1"]["today"]["date"][:10].split("-")
-    last  = (f"\n\n❇️Дата актуальності графіка: {time[2]}/{time[1]}/{time[0]}\n\n"
-             f"🔔Дата сповіщення: {str(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))[:19]}")
+    last  = (f"\n\n❇️Дата актуальності графіка: {time[2]}.{time[1]}.{time[0]}\n\n"
+             f"🔔Дата сповіщення: {str(datetime.now().strftime("%d.%m.%Y %H:%M:%S"))[:19]}")
     end_version += last
     return end_version
 
@@ -50,6 +52,8 @@ def get_yasno_data(groups_list):
 
 
 async def get_info(user_id):
+    sched_cek = load(PROVIDERS["CEK"]["file"])
+    sched_dtek = load(PROVIDERS["DTEK"]["file"])
     async with session_factory() as session:
         result = await session.execute(select(User).where(User.id == str(user_id)))
         user = result.scalar_one_or_none()
@@ -58,31 +62,25 @@ async def get_info(user_id):
         return "Ви ще не обрали групу."
 
     if user.last_status == "EmergencyShutdowns":
-        header = "🚨 ЕКСТРЕНІ ВІДКЛЮЧЕННЯ 🚨\nГрафіки не діють!\nОстанній актуальний графік:\n\n"
-        results = header + get_yasno_data(user.groups)
+        header = "🚨 ЕКСТРЕНІ ВІДКЛЮЧЕННЯ 🚨\nГрафіки не діють!\nОстанній актуальний графік:\n"
+        results = header + get_yasno_data(user.groups, sched_cek, sched_dtek)
         return results
     else:
         header = "️⚡⚡️Ось твій графік!⚡️⚡️\n"
         # user.groups — это уже готовый список!
-        results = header + get_yasno_data(user.groups)
+        results = header + get_yasno_data(user.groups, sched_cek, sched_dtek)
         return results
 
-def get_from_api(provider, file_name):
+async def get_from_api(provider, file_name):
 
     url = "https://app.yasno.ua/api/blackout-service/public/shutdowns/regions/3/dsos/" + str(provider) + "/planned-outages"
-    response = requests.get(url)
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
 
     if response.status_code == 200:
         data = response.json()
-        if data["1.1"]["today"]["status"] == "EmergencyShutdowns":
-            print("EmergencyShutdowns")
-            return data
-        # print(data)
-        else:
-            save(data, file_name)
-            # print(data)
-            print(f"{'CEK' if provider == 301 else 'DTEK'} schedule saved successfully!")
-            return data
+        return data
     else:
         return load(file_name)
 

@@ -1,8 +1,6 @@
 import json
 
 from sqlalchemy import select
-from sqlalchemy.orm.attributes import flag_modified
-
 from database import session_factory, User
 
 
@@ -12,9 +10,16 @@ async def group_from_user(uid):
         user = result.scalar_one_or_none()
         return user.groups if user else []
 
-async def get_all_users():
+async def get_all_users(status = None, notifications = None):
     async with session_factory() as session:
-        result = await session.execute(select(User))
+        query = select(User)
+
+        if status:
+            query = query.where(User.last_status == status)
+        if notifications:
+            query = query.where(User.notifications == notifications)
+
+        result = await session.execute(query)
         return result.scalars().all()
 
 async def users_table(data):

@@ -1,101 +1,94 @@
 import asyncio
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from os import getenv
 from aiogram import Bot, Dispatcher
 
-from dotenv import find_dotenv, load_dotenv
-load_dotenv(find_dotenv("data/.env"))
 
-from storage import load, get_all_users
-from logic import schedule_constructor, get_from_api
+from data.config import TOKEN, PROVIDERS, REFRESH_INTERVAL, RATE_LIMIT
+from auto_update import update
+from storage import load, save
+from logic import get_from_api, get_yasno_data
+from database import session_factory, User  # Импортируем из твоего файла базы
+from sqlalchemy import select
 from handlers.user_private import user_private_router
-from database import session_factory, User, init_db
+from database import init_db
 
-bot = Bot(token=getenv("TOKEN"))
+bot = Bot(token=TOKEN)
 dp = Dispatcher()
 scheduler = AsyncIOScheduler()
 
 dp.include_router(user_private_router)
 
 
-async def check_api():
-    print("Start")
-    last_api_state_cek = load("data/cek.json")
-    last_api_state_dtek = load("data/dtek.json")
-
-    current_data_cek = get_from_api(303, "data/cek.json")
-    current_data_dtek = get_from_api(301, "data/dtek.json")
-
-    async def notify_users(provider_name, current_data, last_state):
-        if not last_state or current_data == last_state:
+async def noti(provider, lst, cur):
+    async with session_factory() as session:
+        # print("Starting notify!")
+        if lst == cur:
+            # print(f"Last status == current status {provider}!")
             return
 
-        # Получаем всех пользователей (функция get_all_users тоже должна быть async!)
-        users = await get_all_users()
+        if cur["1.1"]["today"]["status"] == "EmergencyShutdowns":
+            # Получаем пользователей, которым нужно сменить статус
+            result = await session.execute(
+                select(User).where(User.last_status == "Normal")
+            )
+            users = result.scalars().all()
+            for user in users:
+                # Отправляем сообщение
+                header = "🚨 ЕКСТРЕНІ ВІДКЛЮЧЕННЯ 🚨\nГрафіки не діють!\nОстанній актуальний графік:\n\n"
+                results = header + get_yasno_data(user.groups)
+                try:
+                    await bot.send_message(user.id, results)
+                    # МЕНЯЕМ ДАННЫЕ прямо в объекте
+                    user.last_status = "EmergencyShutdowns"
+                except Exception as e:
+                    print(f"Ошибка отправки пользователю {user.id}: {e}")
+            # КОММИТИМ изменения в этом же файле
+            await session.commit()
+            return
 
-        # Открываем асинхронную сессию
-        async with session_factory() as session:
-            for user_obj in users:
-                # В асинхронной SQLAlchemy session.get — это корутина
-                user = await session.get(User, user_obj.id)
+        result = await session.execute(
+            select(User).where(User.last_status == "EmergencyShutdowns")
+        )
+        users = result.scalars().all()
+        for user in users:
+            user.last_status = "Normal"
+        await session.commit()
+        # print(f"LAst status = normal and update {provider}")
 
-                if not user or not user.groups:
-                    continue
+        notify = await update(provider, lst, cur)
+        for list_user_and_update_message in notify:
+            try:
+                await bot.send_message(
+                    list_user_and_update_message[0],
+                    list_user_and_update_message[1]
+                )
+                await asyncio.sleep(0.05)
+            except Exception as e:
+                print(f"Ошибка отправки пользователю {list_user_and_update_message[0]}: {e}")
 
-                # Проверяем провайдера (предположим, user.sup хранится в базе)
-                if user.sup == provider_name:
-                    send_update = False
-                    is_emergency = False
-                    all_messages = []
+async def check_api():
+    print("Start")
+    last_api_state_cek = load(PROVIDERS["CEK"]["file"])
+    last_api_state_dtek = load(PROVIDERS["DTEK"]["file"])
 
-                    for group in user.groups:
-                        new_status = current_data.get(group, {}).get("today", {}).get("status")
-                        old_status = user.last_status
-
-                        if new_status == "EmergencyShutdowns":
-                            is_emergency = True
-                            if old_status != "EmergencyShutdowns":
-                                send_update = True
-                                mess = schedule_constructor(
-                                    f"Група {group} {provider_name}",
-                                    last_state[group]["today"]["slots"],
-                                    '')
-                                all_messages.append(mess)
-                        elif new_status != old_status:
-                            send_update = True
-                            slots = current_data[group]["today"]["slots"]
-                            all_messages.append(schedule_constructor(f"Група {group}", slots, ''))
-
-                    if send_update and all_messages:
-                        user.last_status = "EmergencyShutdowns" if is_emergency else "Normal"
-                        # Важно для JSON/String полей, если они не обновились автоматически
-                        from sqlalchemy.orm.attributes import flag_modified
-                        flag_modified(user, "last_status")
-
-                        separator = "\n" + "━" * 20 + "\n"
-                        final_text = separator.join(all_messages)
-
-                        header = ("🚨 <b>ЕКСТРЕНІ ВІДКЛЮЧЕННЯ</b> 🚨\nГрафіки не діють!\n"
-                                  "Останній актуальний графік!\n"
-                                  f"Дата: {last_state['1.1']['today']['date'][:10]}") if is_emergency \
-                            else f"❗️ <b>УВАГА! ОНОВЛЕННЯ ГРАФІКУ {provider_name}</b> ❗"
-
-                        try:
-                            await bot.send_message(
-                                user.id,
-                                f"{header}\n\n{final_text}",
-                                parse_mode="HTML"
-                            )
-                            # СОХРАНЯЕМ ИЗМЕНЕНИЯ (ОБЯЗАТЕЛЬНО AWAIT)
-                            await session.commit()
-                            await asyncio.sleep(0.05)
-                        except Exception as e:
-                            print(f"Ошибка отправки пользователю {user.id}: {e}")
+    current_data_cek = await get_from_api(PROVIDERS["CEK"]["code"], PROVIDERS["CEK"]["file"])
+    current_data_dtek = await get_from_api(PROVIDERS["DTEK"]["code"], PROVIDERS["DTEK"]["file"])
 
     # Вызов функции в основном цикле тоже через await
-    await notify_users("ЦЕК", current_data_cek, last_api_state_cek)
-    await notify_users("ДТЕК", current_data_dtek, last_api_state_dtek)
+    await noti("ЦЕК", last_api_state_cek, current_data_cek)
+    if current_data_cek["1.1"]["today"]["status"] == "EmergencyShutdowns":
+        print("EmergencyShutdowns")
+    else:
+        save(current_data_cek, PROVIDERS["CEK"]["file"])
+
+    await noti("ДТЕК", last_api_state_dtek, current_data_dtek)
+    if current_data_dtek["1.1"]["today"]["status"] == "EmergencyShutdowns":
+        print("EmergencyShutdowns")
+    else:
+        save(current_data_dtek, PROVIDERS["DTEK"]["file"])
+
+
 
 async def announcement_for_all_users():
     print("Start announcement for all users")
@@ -110,9 +103,12 @@ async def announcement_for_all_users():
 
     for user in list_of_all_users:
         try:
-            await bot.send_message(user, f"ОГОЛОШЕННЯ. УВАГА!\n\n{message}")
+            await bot.send_message(user, message)
         except Exception as e:
             print(f"Ошибка отправки пользователю {user}: {e}")
+
+        await asyncio.sleep(RATE_LIMIT)
+
     print("End announcement for all users")
 
 
@@ -120,7 +116,6 @@ async def announcement_for_all_users():
 async def main():
     await init_db()
     #await announcement_for_all_users()
-
     try:
         print("Первичный сбор данных...")
         await check_api()
@@ -128,7 +123,7 @@ async def main():
     except Exception as e:
         print(f"Ошибка при старте: {e}")
 
-    scheduler.add_job(check_api, 'interval', minutes=5)
+    scheduler.add_job(check_api, 'interval', minutes=REFRESH_INTERVAL)
     scheduler.start()
 
     await dp.start_polling(bot)

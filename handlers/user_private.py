@@ -103,7 +103,6 @@ async def finish_group_selection(message: types.Message, state: FSMContext):
     # Формируем итоговый словарь (теперь со списком)
     final_data = {
         "id": str(message.from_user.id),
-        #"sup": user_data["sup"],
         "group": selected_groups,  # ТЕПЕРЬ ЭТО СПИСОК
         "notifications": True
     }

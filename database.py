@@ -4,6 +4,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
+from data.config import DB_URL
 
 # 1. Сериализатор для работы с кириллицей в JSON
 def my_serializer(obj):
@@ -13,7 +14,7 @@ def my_serializer(obj):
 # 2. Асинхронный движок для работы бота
 # ВАЖНО: sqlite+aiosqlite
 engine = create_async_engine(
-    "sqlite+aiosqlite:///data/users.db",
+    DB_URL,
     json_serializer=my_serializer
 )
 
