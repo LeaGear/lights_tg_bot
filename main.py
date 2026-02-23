@@ -6,10 +6,10 @@ from aiogram import Bot, Dispatcher
 from datetime import datetime
 
 from data.config import TOKEN, PROVIDERS, REFRESH_INTERVAL, RATE_LIMIT, REFRESH_INTERVAL_ALERT, KYIV_TZ
-from auto_update import update
+from auto_update import updates
 from storage import load, save, get_all_users
 from logic import get_from_api, get_yasno_data
-from database import session_factory, User  # Импортируем из твоего файла базы
+from database import session_factory, User
 from sqlalchemy import select, update
 from handlers.user_private import user_private_router
 from database import init_db
@@ -29,7 +29,7 @@ async def noti(provider, lst, cur):
             # print(f"Last status == current status {provider}!")
             return
 
-        if cur["1.1"]["today"]["status"] == "EmergencyShutdowns":
+        if cur.get("1.1", {}).get("today", {}).get("status" , "") == "EmergencyShutdowns":
             # Получаем пользователей, которым нужно сменить статус
             await session.execute(
                 update(User)
@@ -49,11 +49,9 @@ async def noti(provider, lst, cur):
                 results = header + await get_yasno_data(user.groups)
                 try:
                     await bot.send_message(user.id, results)
-                    # МЕНЯЕМ ДАННЫЕ прямо в объекте
                 except Exception as e:
                     logging.error(f"Failed to send message to {user.id}: {e}", exc_info=True)
                     print(f"Ошибка отправки пользователю {user.id}: {e}")
-            # КОММИТИМ изменения в этом же файле
             return
 
         await session.execute(
@@ -63,7 +61,7 @@ async def noti(provider, lst, cur):
         )
         await session.commit()
 
-        notify = await update(provider, lst, cur)
+        notify = await updates(provider, lst, cur)
         for list_user_and_update_message in notify:
             try:
                 await bot.send_message(
@@ -85,13 +83,13 @@ async def check_api():
 
     # Вызов функции в основном цикле тоже через await
     await noti("ЦЕК", last_api_state_cek, current_data_cek)
-    if current_data_cek["1.1"]["today"]["status"] == "EmergencyShutdowns":
+    if current_data_cek.get("1.1", {}).get("today", {}).get("status" , "") == "EmergencyShutdowns":
         print("EmergencyShutdowns")
     else:
         await save(current_data_cek, PROVIDERS["CEK"]["file"])
 
     await noti("ДТЕК", last_api_state_dtek, current_data_dtek)
-    if current_data_dtek["1.1"]["today"]["status"] == "EmergencyShutdowns":
+    if current_data_dtek.get("1.1", {}).get("today", {}).get("status" , "") == "EmergencyShutdowns":
         print("EmergencyShutdowns")
     else:
         await save(current_data_dtek, PROVIDERS["DTEK"]["file"])
@@ -139,7 +137,8 @@ async def announcement_for_all_users():
             print(f"Ошибка отправки пользователю {user}: {e}")
 
         await asyncio.sleep(RATE_LIMIT)
-    await save(message, f"data/updates/message_{datetime.now(KYIV_TZ).strftime('%d_%m_%Y_%H_%m_%s')}.txt")
+    if message:
+        await save(message, f"data/updates/message_{datetime.now(KYIV_TZ).strftime('%d_%m_%Y_%H_%m_%s')}.txt")
     open("data/message.txt", "w").close()
     print("End announcement for all users")
 
@@ -147,7 +146,7 @@ async def announcement_for_all_users():
 
 async def main():
     await init_db()
-    await announcement_for_all_users()
+    #await announcement_for_all_users()
     try:
         print("Первичный сбор данных...")
         await check_api()

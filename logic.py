@@ -1,23 +1,10 @@
 import httpx
-from datetime import datetime
 from sqlalchemy import select
 
-from data.config import PROVIDERS, KYIV_TZ
+from data.config import PROVIDERS
 from storage import load
 from database import session_factory, User
-
-def schedule_constructor(frst_msg, schedule, message):
-    good_graph = (f"{frst_msg}\n"
-                  f"{message}\n")
-    for date in schedule:
-        if date["type"] == 'Definite':
-            start = int(date["start"])
-            end = int(date["end"])
-            temp = (f"⚡ з {'0'if (start/60) < 10 else''}{int(start/60)}{':00'if start % 60 == 0 else':30' } до "
-                    f"{'0'if (end/60) < 10 else''}{int(end/60)}{':00'if end % 60 == 0 else':30' }\n")
-            good_graph += temp
-    #print(good_graph)
-    return good_graph
+from message_builder import schedule_constructor, get_actual_time
 
 async def get_yasno_data(groups_list, data_cek = None, data_dtek = None):
 
@@ -30,22 +17,23 @@ async def get_yasno_data(groups_list, data_cek = None, data_dtek = None):
         # Используем переданные словари
         data = data_cek if sup == "ЦЕК" else data_dtek
 
-        my_schedule_today = data[group]["today"]["slots"]
-        my_schedule_tomorrow = data[group]["tomorrow"]["slots"]
-        graph = schedule_constructor(f"💡Постачальник: {sup}   Група: {group}💡\n",
-                                     my_schedule_today, "Графік відключень на cьогодні: ")
-        if my_schedule_tomorrow:
-            graph1 = schedule_constructor("", my_schedule_tomorrow,
-                                          f"Попередній графік відключень на завтра: ")
-        else:
-            graph1 = "\nНемає попереднього графіку на завтра!\n"
-        all_graph = "\n" + "═"*20 + "\n" + graph + graph1 + "═"*20 + "\n"
+        my_schedule_today = data.get(group, {}).get("today", {}).get("slots", [])
+        my_schedule_tomorrow = data.get(group, {}).get("tomorrow", {}).get("slots", [])
+
+        graph_today = schedule_constructor(f"💡Постачальник: {sup}   Група: {group}💡\n",
+                                     my_schedule_today, "Графік відключень на cьогодні: ",
+                                           "\nНа даний момент відключення відсутні!\n")
+
+        graph_tomorrow = schedule_constructor("", my_schedule_tomorrow,
+                                      f"Попередній графік відключень на завтра: ",
+                                              "\nНемає попереднього графіку на завтра!\n")
+
+        all_graph = "\n" + "═"*20 + "\n" + graph_today + graph_tomorrow + "═"*20 + "\n"
         end_version += all_graph
         #print(end_version)
-    time = data["1.1"]["today"]["date"][:10].split("-")
-    last  = (f"\n\n❇️Дата актуальності графіка: {time[2]}.{time[1]}.{time[0]}\n\n"
-             f"🔔Дата сповіщення: {str(datetime.now(KYIV_TZ).strftime("%d.%m.%Y %H:%M:%S"))[:19]}")
-    end_version += last
+    time = data.get("1.1", {}).get("today", {}).get("date", "No data")[:10].split("-")
+    #print(time)
+    end_version += get_actual_time(time)
     return end_version
 
 
@@ -59,7 +47,7 @@ async def get_info(user_id):
         user = result.scalar_one_or_none()
 
     if not user or not user.groups:
-        return "Ви ще не обрали групу."
+        return "🟡 Ти не обрав жодної групи 🟡"
 
     if user.last_status == "EmergencyShutdowns":
         header = "🚨 ЕКСТРЕНІ ВІДКЛЮЧЕННЯ 🚨\nГрафіки не діють!\nОстанній актуальний графік:\n"
@@ -67,7 +55,6 @@ async def get_info(user_id):
         return results
     else:
         header = "️⚡⚡️Ось твій графік!⚡️⚡️\n"
-        # user.groups — это уже готовый список!
         results = header + await get_yasno_data(user.groups, sched_cek, sched_dtek)
         return results
 

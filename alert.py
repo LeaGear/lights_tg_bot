@@ -5,7 +5,7 @@ from data.config import PROVIDERS, GROUPS, KYIV_TZ
 
 
 def optimize_schedule_for_alert(schedule):
-    simplified_list = {group:[slot.get("start") for slot in schedule[group]["today"]["slots"]
+    simplified_list = {group:[slot.get("start") for slot in schedule.get(group, {}).get("today", {}).get("slots", [])
                               if slot.get("type") == "Definite"] for group in GROUPS}
     #print(simplified_list)
     return simplified_list
@@ -13,7 +13,7 @@ def optimize_schedule_for_alert(schedule):
 def constructor(provider, now, sch_list, alert_list):
     for group in GROUPS:
         for slot in sch_list[group]:
-            if (slot - now) == 10: alert_list.append([provider, group])
+            if (slot - now) == 15: alert_list.append([provider, group])
 
     return alert_list
 
