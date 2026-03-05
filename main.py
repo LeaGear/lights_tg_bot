@@ -24,9 +24,9 @@ dp.include_router(user_private_router)
 
 async def noti(provider, lst, cur):
     async with session_factory() as session:
-        # print("Starting notify!")
+        #print("Starting notify!")
         if lst == cur:
-            # print(f"Last status == current status {provider}!")
+            #print(f"Last status == current status {provider}!")
             return
 
         if cur.get("1.1", {}).get("today", {}).get("status" , "") == "EmergencyShutdowns":
@@ -60,8 +60,9 @@ async def noti(provider, lst, cur):
             .values(last_status="Normal")
         )
         await session.commit()
-
+        #print("Go to updates!")
         notify = await updates(provider, lst, cur)
+        #print("WE are back", notify)
         for list_user_and_update_message in notify:
             try:
                 await bot.send_message(
@@ -80,6 +81,7 @@ async def check_api():
 
     current_data_cek = await get_from_api(PROVIDERS["CEK"]["code"], PROVIDERS["CEK"]["file"])
     current_data_dtek = await get_from_api(PROVIDERS["DTEK"]["code"], PROVIDERS["DTEK"]["file"])
+    #current_data_dtek = await load("data/dtek1.json")
 
     # Вызов функции в основном цикле тоже через await
     await noti("ЦЕК", last_api_state_cek, current_data_cek)
@@ -92,6 +94,7 @@ async def check_api():
     if current_data_dtek.get("1.1", {}).get("today", {}).get("status" , "") == "EmergencyShutdowns":
         print("EmergencyShutdowns")
     else:
+        #print("GOGoGO")
         await save(current_data_dtek, PROVIDERS["DTEK"]["file"])
 
 async def alert_for_user():
@@ -146,7 +149,7 @@ async def announcement_for_all_users():
 
 async def main():
     await init_db()
-    #await announcement_for_all_users()
+    await announcement_for_all_users()
     try:
         print("Первичный сбор данных...")
         await check_api()
@@ -156,6 +159,8 @@ async def main():
 
     scheduler.add_job(alert_for_user, 'interval', minutes=REFRESH_INTERVAL_ALERT)
     scheduler.add_job(check_api, 'interval', minutes=REFRESH_INTERVAL)
+    #scheduler.add_job(check_api, 'interval', seconds=10)
+
     scheduler.start()
 
     await dp.start_polling(bot)
