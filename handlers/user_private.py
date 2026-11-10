@@ -3,11 +3,13 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
+from data.config import GROUPS
+
+from services import add_user_service
 from logic import get_info
 from storage import users_table, load, save, group_from_user
-from database import del_group_from_db, session_factory, select, User
+#from database import session_factory, select, User
 from keyboards.reply import start_kb, group_kb, ck_dtk_kb, get_keyboard
-from data.config import GROUPS
 
 user_private_router = Router()
 
@@ -23,6 +25,7 @@ class DeleteGroup(StatesGroup):
 async def start_cmd(message : types.Message):
     await message.answer("Привіт, я бот, який завжди буде мати актуальний графік для тебе!😉",
                          reply_markup=start_kb)
+    await add_user_service(message.from_user.id)
 
 @user_private_router.message(F.text == "📋 Мої групи")
 async def schedule(message : types.Message):
@@ -153,7 +156,7 @@ async def del_one_group(message: types.Message, state: FSMContext):
         # Тут твоя логика удаления из базы
         # Например: remove_group_from_db(message.from_user.id, message.text)
         target = message.text.split("-")
-        await del_group_from_db(message.from_user.id, target)
+        #await del_group_from_db(message.from_user.id, target)
         await message.answer(f"Групу {message.text} видалено!", reply_markup=start_kb)
         await state.clear()  # Сбрасываем состояние
     else:
@@ -161,12 +164,13 @@ async def del_one_group(message: types.Message, state: FSMContext):
 
 @user_private_router.message(F.text == "⛔️ Видалити усі групи")
 async def del_all_groups(message: types.Message):
-    async with session_factory() as session:
-        result = await session.execute(select(User).where(User.id == str(message.from_user.id)))
-        user = result.scalar_one_or_none()
-        user.groups = []
-        await session.commit()
-    await message.answer("Усі групи видалені!")
+    #async with session_factory() as session:
+    #    result = await session.execute(select(User).where(User.id == str(message.from_user.id)))
+    ##    user = result.scalar_one_or_none()
+     #   user.groups = []
+    #    await session.commit()
+    #await message.answer("Усі групи видалені!")
+    pass
 
 @user_private_router.message()
 async def input_error(message : types.Message):

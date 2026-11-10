@@ -1,8 +1,8 @@
 import json
-from sqlalchemy import Column, String, Boolean, JSON, select
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import String, BigInteger, UniqueConstraint, ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncConnection
+from sqlalchemy.dialects.postgresql import JSONB
 
 from data.config import DB_URL
 
@@ -12,7 +12,6 @@ def my_serializer(obj):
 
 
 # 2. Асинхронный движок для работы бота
-# ВАЖНО: sqlite+aiosqlite
 engine = create_async_engine(
     DB_URL,
     echo=False,
@@ -34,12 +33,23 @@ class Base(DeclarativeBase):
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(String, primary_key=True)
-    #sup = Column(String)
-    groups = Column(JSON)
-    notifications = Column(Boolean, default=True)
-    last_status = Column(String, default="Normal")
+    id : Mapped[int] = mapped_column(primary_key=True)
+    telegram_id : Mapped[int] = mapped_column(BigInteger, unique=True)
 
+class OutageGroup(Base):
+    __tablename__ = "outage_groups"
+    __table_args__ = (UniqueConstraint("provider", "queue"),)
+    id : Mapped[int] = mapped_column(primary_key=True)
+    provider : Mapped[str] = mapped_column(String(20))
+    queue : Mapped[str] = mapped_column(String(10))
+    schedule_hash : Mapped[str | None] = mapped_column(String(64))
+    schedule_json : Mapped[dict | None] = mapped_column(JSONB)
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    user_id : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    group_id : Mapped[int] = mapped_column(ForeignKey("outage_groups.id", ondelete="CASCADE"), primary_key=True)
+    last_notified_hash : Mapped[str | None] = mapped_column(String(64))
 
 # 4. Асинхронная инициализация базы
 async def init_db():
@@ -47,19 +57,6 @@ async def init_db():
         conn:AsyncConnection
         # Используем run_sync для синхронной команды создания таблиц
         await conn.run_sync(Base.metadata.create_all)
+        print("Database initialized")
 
 
-# 5. Функция удаления группы
-async def del_group_from_db(user_id: int, target_list: list):
-    async with session_factory() as session:
-        result = await session.execute(select(User).where(User.id == str(user_id)))
-        user = result.scalar_one_or_none()
-
-        if user and user.groups:
-            # Оставляем только те группы, которые не совпадают с удаляемой
-            user.groups = [g for g in user.groups if g != target_list]
-
-            # Сообщаем SQLAlchemy, что список внутри JSON изменился
-            flag_modified(user, "groups")
-
-            await session.commit()

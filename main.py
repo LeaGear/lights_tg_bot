@@ -6,14 +6,14 @@ from aiogram import Bot, Dispatcher
 from datetime import datetime
 
 from data.config import TOKEN, PROVIDERS, REFRESH_INTERVAL, RATE_LIMIT, REFRESH_INTERVAL_ALERT, KYIV_TZ
-from auto_update import updates
-from storage import load, save, get_all_users
-from logic import get_from_api, get_yasno_data
-from database import session_factory, User
-from sqlalchemy import select, update
+#from auto_update import updates
+#from storage import load, save, get_all_users
+#from logic import get_from_api, get_yasno_data
+#rom database import session_factory, User
+#from sqlalchemy import select, update
 from handlers.user_private import user_private_router
 from database import init_db
-from alert import alert_groups_list
+#from alert import alert_groups_list
 
 
 bot = Bot(token=TOKEN)
@@ -149,19 +149,19 @@ async def announcement_for_all_users():
 
 async def main():
     await init_db()
-    await announcement_for_all_users()
-    try:
-        print("Первичный сбор данных...")
-        await check_api()
-        print("Данные успешно подтянуты.")
-    except Exception as e:
-        print(f"Ошибка при старте: {e}")
+    #await announcement_for_all_users()
+    #try:
+    #    print("Первичный сбор данных...")
+    #    await check_api()
+    #    print("Данные успешно подтянуты.")
+    #except Exception as e:
+    #    print(f"Ошибка при старте: {e}")
 
-    scheduler.add_job(alert_for_user, 'interval', minutes=REFRESH_INTERVAL_ALERT)
-    scheduler.add_job(check_api, 'interval', minutes=REFRESH_INTERVAL)
+    #scheduler.add_job(alert_for_user, 'interval', minutes=REFRESH_INTERVAL_ALERT)
+    #scheduler.add_job(check_api, 'interval', minutes=REFRESH_INTERVAL)
     #scheduler.add_job(check_api, 'interval', seconds=10)
 
-    scheduler.start()
+    #scheduler.start()
 
     await dp.start_polling(bot)
 
