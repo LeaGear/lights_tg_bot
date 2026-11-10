@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 from data.config import GROUPS
 
-from services import add_user_service
+from services import add_user_service, get_user_groups_list_service
 from logic import get_info
 from storage import users_table, load, save, group_from_user
 #from database import session_factory, select, User
@@ -29,6 +29,7 @@ async def start_cmd(message : types.Message):
 
 @user_private_router.message(F.text == "📋 Мої групи")
 async def schedule(message : types.Message):
+    answer = await get_user_groups_list_service(message.from_user.id)
     groups_for_watching = await group_from_user(message.from_user.id)
     if groups_for_watching:
         mess = "📜Ось список груп за якими ти слідкуєш!📜\n\n"

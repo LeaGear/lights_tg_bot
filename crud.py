@@ -14,6 +14,25 @@ async def add_user_db(telegram_id: int):
         await session.commit()
         return await session.execute(select(User).where(User.telegram_id == telegram_id))
 
+async def get_user_groups_db(telegram_id: int) -> list:
+    async with session_factory() as session:
+        result = await session.scalars(
+            select(OutageGroup)
+            .join(Subscription, Subscription.group_id == OutageGroup.id)
+            .join(User, User.id == Subscription.user_id)
+            .where(User.telegram_id==telegram_id)
+        )
+        return list(result.all())
+
+
+
+
+
+
+
+
+
+
 # 5. Функция удаления группы
 async def del_group_from_db(user_id: int, target_list: list):
     async with session_factory() as session:

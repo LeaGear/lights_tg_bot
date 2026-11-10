@@ -58,3 +58,14 @@ def builder_for_notification(sched_ch, users, date):
             final_list.append([user_id, message])
 
     return final_list
+
+async def build_groups_message(user_groups):
+    result = ""
+    header = "📜Ось список груп за якими ти слідкуєш!📜\n"
+    result += header
+
+    for group_data in user_groups:
+        temp = f"{group_data.provider}-{group_data.queue},"
+        result += temp
+    result = result[:-1]
+    return result
