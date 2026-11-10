@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv("data/.env")
 
 TOKEN = os.getenv("TOKEN")
-DB_URL = "sqlite+aiosqlite:///data/users.db"
+DB_URL = os.getenv("DB_PSQL_URL")
 
 PROVIDERS = {
     "CEK": {"code" : 303, "file" : "data/cek.json"},

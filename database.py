@@ -15,6 +15,8 @@ def my_serializer(obj):
 # ВАЖНО: sqlite+aiosqlite
 engine = create_async_engine(
     DB_URL,
+    echo=False,
+    pool_pre_ping=True,
     json_serializer=my_serializer
 )
 
