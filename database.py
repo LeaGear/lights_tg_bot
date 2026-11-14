@@ -42,8 +42,8 @@ class OutageGroup(Base):
     id : Mapped[int] = mapped_column(primary_key=True)
     provider : Mapped[str] = mapped_column(String(20))
     queue : Mapped[str] = mapped_column(String(10))
-    schedule_hash : Mapped[str | None] = mapped_column(String(64))
-    schedule_json : Mapped[dict | None] = mapped_column(JSONB)
+    today_schedule_hash : Mapped[str | None] = mapped_column(String(64))
+    today_schedule_json : Mapped[dict | None] = mapped_column(JSONB)
 
 class Subscription(Base):
     __tablename__ = "subscriptions"

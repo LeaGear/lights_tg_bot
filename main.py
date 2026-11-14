@@ -148,7 +148,7 @@ async def announcement_for_all_users():
 
 
 async def main():
-    await init_db()
+    #await init_db() pre alembic mechanism
     #await announcement_for_all_users()
     #try:
     #    print("Первичный сбор данных...")
