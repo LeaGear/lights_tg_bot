@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 from data.config import GROUPS
 
-from services import add_user_service, get_user_groups_list_service
+from services import add_user_service, get_user_groups_list_service, get_user_schedule_service
 from logic import get_info
 from storage import users_table, load, save, group_from_user
 #from database import session_factory, select, User
@@ -28,22 +28,32 @@ async def start_cmd(message : types.Message):
     await add_user_service(message.from_user.id)
 
 @user_private_router.message(F.text == "📋 Мої групи")
-async def schedule(message : types.Message):
+async def user_groups(message : types.Message):
     answer = await get_user_groups_list_service(message.from_user.id)
-    groups_for_watching = await group_from_user(message.from_user.id)
-    if groups_for_watching:
-        mess = "📜Ось список груп за якими ти слідкуєш!📜\n\n"
-        for i in groups_for_watching:
-            mess += f"{i[0]}-{i[1]}, "
-        await message.answer(mess[:-2], reply_markup=start_kb)
+    if not answer:
+        await message.answer("🟡 Ти не обрав жодної групи 🟡", reply_markup=start_kb)
     else:
-        await message.answer("🟡 Ти не обрав жодної групи 🟡")
+        await message.answer(answer, reply_markup=start_kb)
+
+    #groups_for_watching = await group_from_user(message.from_user.id)
+    #if groups_for_watching:
+    #    mess = "📜Ось список груп за якими ти слідкуєш!📜\n\n"
+    #    for i in groups_for_watching:
+    #        mess += f"{i[0]}-{i[1]}, "
+    #    await message.answer(mess[:-2], reply_markup=start_kb)
+    #else:
+    #    await message.answer("🟡 Ти не обрав жодної групи 🟡")
 
 
 @user_private_router.message(F.text == "🗓 Графік")
-async def schedule(message : types.Message):
-    graph = await get_info(message.from_user.id)
-    await message.answer(graph, reply_markup=start_kb)
+async def user_schedule(message : types.Message):
+    answer_message = await get_user_schedule_service(message.from_user.id)
+    if not answer_message:
+        await message.answer("🟡 Ти не обрав жодної групи 🟡", reply_markup=start_kb)
+    await message.answer(answer_message, reply_markup=start_kb)
+
+    #graph = await get_info(message.from_user.id)
+    #await message.answer(graph, reply_markup=start_kb)
 
 @user_private_router.message(F.text == "👥 Обери групу")
 async def choose_sup(message : types.Message, state: FSMContext):

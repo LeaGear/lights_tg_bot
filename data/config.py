@@ -12,7 +12,12 @@ PROVIDERS = {
     "CEK": {"code" : 303, "file" : "data/cek.json"},
     "DTEK": {"code" : 301, "file" : "data/dtek.json"},
 }
-
+LOCALIZATION = {
+    "DTEK" : "ДТЕК",
+    "CEK" : "ЦЕК",
+    "ДТЕК" : "DTEK",
+    "ЦЕК" : "CEK"
+}
 GROUPS = ["1.1", "1.2", "2.1", "2.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2", "6.1", "6.2"]
 KYIV_TZ = pytz.timezone('Europe/Kyiv')
 

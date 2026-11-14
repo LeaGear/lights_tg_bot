@@ -1,10 +1,7 @@
 from datetime import datetime
-from data.config import KYIV_TZ
+from data.config import KYIV_TZ, LOCALIZATION
 
-def time_zone_builder(start, end):
-    zone = (f"⚡ з {'0'if (start/60) < 10 else''}{int(start/60)}{':00'if start % 60 == 0 else':30' } до "
-                    f"{'0'if (end/60) < 10 else''}{int(end/60)}{':00'if end % 60 == 0 else':30' }\n")
-    return zone
+
 
 def get_actual_time(time):
 
@@ -23,7 +20,7 @@ def schedule_constructor(frst_msg, schedule, message, reserve):
         if date["type"] == 'Definite':
             start = int(date["start"])
             end = int(date["end"])
-            temp += time_zone_builder(start, end)
+            temp += _time_zone_builder(start, end)
 
     if temp:
         finish_alert = (f"{frst_msg}\n"
@@ -52,12 +49,33 @@ def builder_for_notification(sched_ch, users, date):
                     end = j.get("end")
                     if start is None and end is None:
                         continue
-                    message += time_zone_builder(start, end)
+                    message += _time_zone_builder(start, end)
 
             message += get_actual_time(date)
             final_list.append([user_id, message])
 
     return final_list
+
+# <<<<<<<<<<< NEW FUNCTION FOR UPDATED BOT >>>>>>>>>
+
+def _json_schedule_parser(schedule) -> str | None:
+    result = ""
+    slots = schedule.get("slots",  "")
+    if not slots:
+        return "⚡ Наразі немає інформації про відключення ⚡"
+
+    for slot in slots:
+        if slot["type"] == "Definite":
+            start = slot["start"]
+            end = slot["end"]
+            result += _time_zone_builder(start, end)
+
+    return result
+
+def _time_zone_builder(start, end):
+    zone = (f"⚡ з {'0'if (start/60) < 10 else''}{int(start/60)}{':00'if start % 60 == 0 else':30' } до "
+                    f"{'0'if (end/60) < 10 else''}{int(end/60)}{':00'if end % 60 == 0 else':30' }\n")
+    return zone
 
 async def build_groups_message(user_groups):
     result = ""
@@ -65,7 +83,21 @@ async def build_groups_message(user_groups):
     result += header
 
     for group_data in user_groups:
-        temp = f"{group_data.provider}-{group_data.queue},"
+        temp = f"{LOCALIZATION.get(group_data.provider, "")}-{group_data.queue}, "
         result += temp
-    result = result[:-1]
+    result = result[:-2]
+    return result
+
+async def build_schedule_message(user_groups):
+    result = ""
+    header = "️⚡️⚡️Графік за твоїми підписками!⚡️⚡️\n\n\n"
+    result += header
+
+    for group_data in user_groups:
+        temp = (f"💡Група: {LOCALIZATION.get(group_data.provider, "")}-{group_data.queue}💡\n\n"
+                #f"Графік відключень на сьогодні:\n"
+                f"{_json_schedule_parser(group_data.today_schedule_json)}\n\n")
+        result += temp
+    #result += updated_on data for actuality
+
     return result
