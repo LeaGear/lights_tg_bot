@@ -59,6 +59,9 @@ def builder_for_notification(sched_ch, users, date):
 # <<<<<<<<<<< NEW FUNCTION FOR UPDATED BOT >>>>>>>>>
 
 def _json_schedule_parser(schedule) -> str | None:
+    if schedule is None:
+        return "⚡ Наразі немає інформації про відключення ⚡"
+
     result = ""
     slots = schedule.get("slots",  "")
     if not slots:

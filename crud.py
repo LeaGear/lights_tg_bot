@@ -1,8 +1,7 @@
-
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.dialects.postgresql import insert
 from database import session_factory, User, OutageGroup, Subscription
-
+from exceptions import UnknownGroupError
 
 async def add_user_db(telegram_id: int):
     async with session_factory() as session:
@@ -24,26 +23,38 @@ async def get_user_groups_db(telegram_id: int) -> list:
         )
         return list(result.all())
 
-
-
-
-
-
-
-
-
-
-# 5. Функция удаления группы
-async def del_group_from_db(user_id: int, target_list: list):
+async def add_user_subs_db(telegram_id: int, queue: str, provider: str):
     async with session_factory() as session:
-        result = await session.execute(select(User).where(User.id == str(user_id)))
-        user = result.scalar_one_or_none()
+        user_id = await session.scalar(
+            select(User.id).where(User.telegram_id == telegram_id)
+        )
+        group_id = await session.scalar(
+            select(OutageGroup.id).where(OutageGroup.queue == queue,
+                                      OutageGroup.provider == provider)
+        )
 
-        if user and user.groups:
-            # Оставляем только те группы, которые не совпадают с удаляемой
-            user.groups = [g for g in user.groups if g != target_list]
+        if group_id is None:
+            await session.rollback()
+            raise UnknownGroupError(group_id)
 
-            # Сообщаем SQLAlchemy, что список внутри JSON изменился
-            flag_modified(user, "groups")
+        result = await session.execute(
+            insert(Subscription)
+            .values(user_id=user_id, group_id=group_id)
+            .on_conflict_do_nothing()
+        )
+        await session.commit()
+        return "added" if result.rowcount else "exists"
 
-            await session.commit()
+async def delete_user_subscription_db(telegram_id: int, queue: str, provider: str):
+    async with session_factory() as session:
+        result = await session.execute(
+            delete(Subscription).where(
+                Subscription.user_id == select(User.id).where(User.telegram_id == telegram_id).scalar_subquery(),
+                Subscription.group_id == select(OutageGroup.id).where(
+                    OutageGroup.provider == provider,
+                    OutageGroup.queue == queue,
+                ).scalar_subquery(),
+            )
+        )
+        await session.commit()
+        return bool(result.rowcount)
