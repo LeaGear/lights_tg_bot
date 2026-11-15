@@ -1,6 +1,6 @@
 from data.config import LOCALIZATION
 
-from crud import add_user_db, get_user_groups_db, add_user_subs_db, delete_user_subscription_db
+from crud import add_user_db, get_user_groups_db, add_user_subs_db, delete_user_subscription_db, delete_all_user_subscriptions_db
 from message_builder import build_groups_message, build_schedule_message
 from exceptions import UnknownGroupError
 
@@ -47,3 +47,7 @@ async def delete_user_subscription_service(telegram_id: int, group: str):
     queue = group_data[1]
     response = await delete_user_subscription_db(telegram_id=telegram_id, queue=queue, provider=provider)
     return response
+
+async def delete_all_user_subscriptions_service(telegram_id):
+    db_resp = await delete_all_user_subscriptions_db(telegram_id)
+    return db_resp

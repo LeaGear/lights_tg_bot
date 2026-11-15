@@ -58,3 +58,13 @@ async def delete_user_subscription_db(telegram_id: int, queue: str, provider: st
         )
         await session.commit()
         return bool(result.rowcount)
+
+async def delete_all_user_subscriptions_db(telegram_id: int):
+    async with session_factory() as session:
+        result = await session.execute(
+            delete(Subscription).where(
+                Subscription.user_id == select(User.id).where(User.telegram_id == telegram_id).scalar_subquery()
+            )
+        )
+        await session.commit()
+        return bool(result.rowcount)
