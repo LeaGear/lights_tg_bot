@@ -1,15 +1,14 @@
 import httpx
 from sqlalchemy import select
 
-from data.config import PROVIDERS
 from storage import load
 from database import session_factory, User
 from message_builder import schedule_constructor, get_actual_time
 
 async def get_yasno_data(groups_list, data_cek = None, data_dtek = None):
 
-    if data_cek is None: data_cek = await load(PROVIDERS["CEK"]["file"])
-    if data_dtek is None: data_dtek = await load(PROVIDERS["DTEK"]["file"])
+    #if data_cek is None: data_cek = await load(PROVIDERS["CEK"]["file"])
+    #if data_dtek is None: data_dtek = await load(PROVIDERS["DTEK"]["file"])
     end_version = ""
     for i in groups_list:
         sup = i[0]
@@ -40,8 +39,8 @@ async def get_yasno_data(groups_list, data_cek = None, data_dtek = None):
 
 
 async def get_info(user_id):
-    sched_cek = await load(PROVIDERS["CEK"]["file"])
-    sched_dtek = await load(PROVIDERS["DTEK"]["file"])
+    #sched_cek = await load(PROVIDERS["CEK"]["file"])
+    #sched_dtek = await load(PROVIDERS["DTEK"]["file"])
     async with session_factory() as session:
         result = await session.execute(select(User).where(User.id == str(user_id)))
         user = result.scalar_one_or_none()

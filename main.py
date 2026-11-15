@@ -5,18 +5,20 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot, Dispatcher
 from datetime import datetime
 
-from data.config import TOKEN, PROVIDERS, REFRESH_INTERVAL, RATE_LIMIT, REFRESH_INTERVAL_ALERT, KYIV_TZ
+from data.config import TOKEN, RATE_LIMIT, REFRESH_INTERVAL_ALERT, KYIV_TZ, PARSER_REFRESH_INTERVAL_IN_MINUTES
+from bot_instance import bot
 #from auto_update import updates
 #from storage import load, save, get_all_users
 #from logic import get_from_api, get_yasno_data
 #rom database import session_factory, User
 #from sqlalchemy import select, update
 from handlers.user_private import user_private_router
+from event_scheduler import parser_scheduler
 from database import init_db
 #from alert import alert_groups_list
 
 
-bot = Bot(token=TOKEN)
+
 dp = Dispatcher()
 scheduler = AsyncIOScheduler()
 
@@ -159,9 +161,12 @@ async def main():
 
     #scheduler.add_job(alert_for_user, 'interval', minutes=REFRESH_INTERVAL_ALERT)
     #scheduler.add_job(check_api, 'interval', minutes=REFRESH_INTERVAL)
-    #scheduler.add_job(check_api, 'interval', seconds=10)
 
-    #scheduler.start()
+    #TEST
+    #scheduler.add_job(parser_scheduler, 'interval', minutes=PARSER_REFRESH_INTERVAL_IN_MINUTES)
+    scheduler.add_job(parser_scheduler, 'interval', seconds=20)
+
+    scheduler.start()
 
     await dp.start_polling(bot)
 

@@ -1,4 +1,4 @@
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from database import session_factory, User, OutageGroup, Subscription
 from exceptions import UnknownGroupError
@@ -68,3 +68,54 @@ async def delete_all_user_subscriptions_db(telegram_id: int):
         )
         await session.commit()
         return bool(result.rowcount)
+
+# PARSER INTERACTIONS WITH DB
+
+async def update_today_schedule_info_db(package: list[dict]) -> list[dict]:
+    changed = []
+    async with session_factory() as session:
+        for items in package:
+            group = await session.scalar(
+                select(OutageGroup).where(
+                    OutageGroup.provider == items["provider"],
+                    OutageGroup.queue == items["queue"],
+                )
+            )
+            if group is None:
+                group = OutageGroup(provider=items["provider"], queue=items["queue"])
+                session.add(group)
+
+            if group.today_schedule_hash != items["data_hash"]:
+                group.today_schedule_json = items["data_json"]
+                group.today_schedule_hash = items["data_hash"]
+                changed.append({
+                    "provider": items["provider"],
+                    "queue": items["queue"]
+                })
+
+        await session.commit()
+        return changed
+
+async def get_data_for_notify_db(groups_list: list[dict]) -> list[dict]:
+    pairs = [(g["provider"], g["queue"]) for g in groups_list]
+
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(
+                User.telegram_id,
+                Subscription.user_id,
+                Subscription.group_id,
+                OutageGroup.provider,
+                OutageGroup.queue,
+                OutageGroup.today_schedule_json,
+                OutageGroup.today_schedule_hash
+            )
+            .select_from(OutageGroup)
+            .join(Subscription, Subscription.group_id == OutageGroup.id)
+            .join(User, User.id == Subscription.user_id)
+            .where(
+                tuple_(OutageGroup.provider, OutageGroup.queue).in_(pairs),
+                Subscription.last_notified_hash.is_distinct_from(OutageGroup.today_schedule_hash)
+            )
+        )
+    return [dict(r._mapping) for r in rows]

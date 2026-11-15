@@ -91,16 +91,12 @@ async def build_groups_message(user_groups):
     result = result[:-2]
     return result
 
-async def build_schedule_message(user_groups):
-    result = ""
-    header = "️⚡️⚡️Графік за твоїми підписками!⚡️⚡️\n\n\n"
-    result += header
+async def build_schedule_message(provider, queue, schedule_json):
+    message = (f"💡Група: {provider}-{queue}💡\n\n"
+            #f"Графік відключень на сьогодні:\n"
+            f"{_json_schedule_parser(schedule_json)}\n\n")
+    return message
 
-    for group_data in user_groups:
-        temp = (f"💡Група: {LOCALIZATION.get(group_data.provider, "")}-{group_data.queue}💡\n\n"
-                #f"Графік відключень на сьогодні:\n"
-                f"{_json_schedule_parser(group_data.today_schedule_json)}\n\n")
-        result += temp
-    #result += updated_on data for actuality
-
+async def construct_full_message(header="", body="", footer="") -> str:
+    result = header + body + footer
     return result

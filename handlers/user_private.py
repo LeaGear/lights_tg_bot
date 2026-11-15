@@ -3,14 +3,10 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
-from auto_update import updates
 from data.config import GROUPS
 
 from services import (add_user_service, get_user_groups_message_service, get_user_groups_list_service, get_message_user_schedule_service,
                       update_user_subscriptions_service, delete_user_subscription_service, delete_all_user_subscriptions_service)
-from logic import get_info
-from storage import users_table, load, save, group_from_user
-#from database import session_factory, select, User
 from keyboards.reply import start_kb, group_kb, ck_dtk_kb, get_keyboard
 
 user_private_router = Router()
