@@ -91,10 +91,11 @@ async def build_groups_message(user_groups):
     result = result[:-2]
     return result
 
-async def build_schedule_message(provider, queue, schedule_json):
+async def build_schedule_message(provider, queue, schedule_json, actual_date):
     message = (f"💡Група: {provider}-{queue}💡\n\n"
             #f"Графік відключень на сьогодні:\n"
-            f"{_json_schedule_parser(schedule_json)}\n\n")
+                f"{_json_schedule_parser(schedule_json)}\n"
+                f"❇️Час оновлення графіка: {actual_date.strftime('%d.%m.%Y %H:%M:%S')}\n\n")
     return message
 
 async def construct_full_message(header="", body="", footer="") -> str:

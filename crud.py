@@ -88,6 +88,7 @@ async def update_today_schedule_info_db(package: list[dict]) -> list[dict]:
             if group.today_schedule_hash != items["data_hash"]:
                 group.today_schedule_json = items["data_json"]
                 group.today_schedule_hash = items["data_hash"]
+                group.schedule_actuality = items["actuality"]
                 changed.append({
                     "provider": items["provider"],
                     "queue": items["queue"]
@@ -108,7 +109,8 @@ async def get_data_for_notify_db(groups_list: list[dict]) -> list[dict]:
                 OutageGroup.provider,
                 OutageGroup.queue,
                 OutageGroup.today_schedule_json,
-                OutageGroup.today_schedule_hash
+                OutageGroup.today_schedule_hash,
+                OutageGroup.schedule_actuality,
             )
             .select_from(OutageGroup)
             .join(Subscription, Subscription.group_id == OutageGroup.id)

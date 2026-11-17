@@ -1,8 +1,9 @@
 import json
 import hashlib
 
-from data.config import LOCALIZATION, MESSAGE_HEADERS
+from datetime import datetime
 
+from data.config import LOCALIZATION, MESSAGE_HEADERS, KYIV_TZ
 from crud import (add_user_db, get_user_groups_db, add_user_subs_db,
                   delete_user_subscription_db, delete_all_user_subscriptions_db, update_today_schedule_info_db,
                   get_data_for_notify_db)
@@ -47,6 +48,7 @@ async def get_message_user_schedule_service(tg_id: int) -> str | None:
             provider=LOCALIZATION.get(user_group.provider),
             queue=user_group.queue,
             schedule_json=user_group.today_schedule_json,
+            actual_date=user_group.schedule_actuality.astimezone(KYIV_TZ)
         )
         body += temp
 
@@ -79,6 +81,7 @@ async def update_today_schedule_info_service(provider, data):
         if not isinstance(value, dict):
             continue
         today = value.get("today")
+        actuality = value.get("updatedOn")
         if today is None:
             continue
 
@@ -88,6 +91,7 @@ async def update_today_schedule_info_service(provider, data):
             "queue": queue,
             "data_json" : today,
             "data_hash" : data_hash,
+            "actuality" : datetime.fromisoformat(actuality)
         }
         update_package.append(temp)
 
@@ -109,7 +113,8 @@ async def get_full_data_for_notify_service(groups_list: list[dict]) -> dict:
         message_body = await build_schedule_message(
             provider=LOCALIZATION.get(notify["provider"]),
             queue=notify["queue"],
-            schedule_json=notify["today_schedule_json"]
+            schedule_json=notify["today_schedule_json"],
+            actual_date=notify["schedule_actuality"].astimezone(KYIV_TZ)
         )
         temp = {
             "message": message_body,

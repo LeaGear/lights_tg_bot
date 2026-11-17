@@ -14,7 +14,6 @@ from bot_instance import bot
 #from sqlalchemy import select, update
 from handlers.user_private import user_private_router
 from event_scheduler import parser_scheduler
-from database import init_db
 #from alert import alert_groups_list
 
 

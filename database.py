@@ -1,5 +1,7 @@
 import json
-from sqlalchemy import String, BigInteger, UniqueConstraint, ForeignKey
+from datetime import datetime
+
+from sqlalchemy import String, BigInteger, UniqueConstraint, ForeignKey, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncConnection
 from sqlalchemy.dialects.postgresql import JSONB
@@ -44,19 +46,10 @@ class OutageGroup(Base):
     queue : Mapped[str] = mapped_column(String(10))
     today_schedule_hash : Mapped[str | None] = mapped_column(String(64))
     today_schedule_json : Mapped[dict | None] = mapped_column(JSONB)
+    schedule_actuality : Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
     user_id : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     group_id : Mapped[int] = mapped_column(ForeignKey("outage_groups.id", ondelete="CASCADE"), primary_key=True)
     last_notified_hash : Mapped[str | None] = mapped_column(String(64))
-
-# 4. Асинхронная инициализация базы
-async def init_db():
-    async with engine.begin() as conn:
-        conn:AsyncConnection
-        # Используем run_sync для синхронной команды создания таблиц
-        await conn.run_sync(Base.metadata.create_all)
-        print("Database initialized")
-
-
