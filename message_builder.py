@@ -1,5 +1,5 @@
 from datetime import datetime
-from data.config import KYIV_TZ, LOCALIZATION
+from data.config import KYIV_TZ
 
 
 
@@ -86,7 +86,7 @@ async def build_groups_message(user_groups):
     result += header
 
     for group_data in user_groups:
-        temp = f"{LOCALIZATION.get(group_data.provider, "")}-{group_data.queue}, "
+        temp = f"{group_data.provider}-{group_data.queue}, "
         result += temp
     result = result[:-2]
     return result

@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from sqlalchemy import String, BigInteger, UniqueConstraint, ForeignKey, DateTime
+from sqlalchemy import String, BigInteger, UniqueConstraint, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncConnection
 from sqlalchemy.dialects.postgresql import JSONB
@@ -42,7 +42,11 @@ class OutageGroup(Base):
     __tablename__ = "outage_groups"
     __table_args__ = (UniqueConstraint("provider", "queue"),)
     id : Mapped[int] = mapped_column(primary_key=True)
-    provider : Mapped[str] = mapped_column(String(20))
+    provider: Mapped[str] = mapped_column(
+        String(20),
+        ForeignKey("provider_metadata.provider", ondelete="CASCADE"),
+        nullable=False,
+    )
     queue : Mapped[str] = mapped_column(String(10))
     today_schedule_hash : Mapped[str | None] = mapped_column(String(64))
     today_schedule_json : Mapped[dict | None] = mapped_column(JSONB)
@@ -53,3 +57,9 @@ class Subscription(Base):
     user_id : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     group_id : Mapped[int] = mapped_column(ForeignKey("outage_groups.id", ondelete="CASCADE"), primary_key=True)
     last_notified_hash : Mapped[str | None] = mapped_column(String(64))
+
+class ProviderMetaData(Base):
+    __tablename__ = "provider_metadata"
+    provider : Mapped[str] = mapped_column(String(20), primary_key=True)
+    schedule_updated_time : Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_emergency_shutdown : Mapped[bool] = mapped_column(Boolean, default=False)

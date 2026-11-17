@@ -3,7 +3,7 @@ import hashlib
 
 from datetime import datetime
 
-from data.config import LOCALIZATION, MESSAGE_HEADERS, KYIV_TZ
+from data.config import MESSAGE_HEADERS, KYIV_TZ
 from crud import (add_user_db, get_user_groups_db, add_user_subs_db,
                   delete_user_subscription_db, delete_all_user_subscriptions_db, update_today_schedule_info_db,
                   get_data_for_notify_db)
@@ -25,11 +25,7 @@ async def get_user_groups_list_service(tg_id: int) -> list:
     user_groups = await get_user_groups_db(tg_id)
     if not user_groups:
         return []
-    else:
-        result = []
-        for user_group in user_groups:
-            result.append(f"{LOCALIZATION.get(user_group.provider, "")}-{user_group.queue}")
-        return result
+    return [f"{user_group.provider}-{user_group.queue}" for user_group in user_groups]
 
 async def get_user_groups_message_service(tg_id: int) -> str | None:
     user_groups = await get_user_groups_db(tg_id)
@@ -45,7 +41,7 @@ async def get_message_user_schedule_service(tg_id: int) -> str | None:
         return None
     for user_group in user_groups:
         temp = await build_schedule_message(
-            provider=LOCALIZATION.get(user_group.provider),
+            provider=user_group.provider,
             queue=user_group.queue,
             schedule_json=user_group.today_schedule_json,
             actual_date=user_group.schedule_actuality.astimezone(KYIV_TZ)
@@ -58,15 +54,15 @@ async def get_message_user_schedule_service(tg_id: int) -> str | None:
 async def update_user_subscriptions_service(tg_id: int, groups_queue: list, provider: str) -> str | None:
     try:
         for queue in groups_queue:
-            await add_user_subs_db(tg_id, queue, LOCALIZATION.get(provider, ""))
+            await add_user_subs_db(tg_id, queue, provider)
         return await get_user_groups_message_service(tg_id)
 
     except UnknownGroupError:
         return 'error'
 
 async def delete_user_subscription_service(telegram_id: int, group: str):
-    group_data = group.split("-")
-    provider = LOCALIZATION.get(group_data[0], "")
+    group_data = group.split("-") #GROUP DATA LIKE -> ['ЦЕК', '1.1'] ['provider', 'queue']
+    provider = group_data[0]
     queue = group_data[1]
     response = await delete_user_subscription_db(telegram_id=telegram_id, queue=queue, provider=provider)
     return response
@@ -111,7 +107,7 @@ async def get_full_data_for_notify_service(groups_list: list[dict]) -> dict:
     for notify in actual_data:
         user_tg_id = str(notify["telegram_id"])
         message_body = await build_schedule_message(
-            provider=LOCALIZATION.get(notify["provider"]),
+            provider=notify["provider"],
             queue=notify["queue"],
             schedule_json=notify["today_schedule_json"],
             actual_date=notify["schedule_actuality"].astimezone(KYIV_TZ)

@@ -1,6 +1,6 @@
 from sqlalchemy import select, delete, tuple_
 from sqlalchemy.dialects.postgresql import insert
-from database import session_factory, User, OutageGroup, Subscription
+from database import session_factory, User, OutageGroup, Subscription, ProviderMetaData
 from exceptions import UnknownGroupError
 
 async def add_user_db(telegram_id: int):
@@ -19,6 +19,7 @@ async def get_user_groups_db(telegram_id: int) -> list:
             select(OutageGroup)
             .join(Subscription, Subscription.group_id == OutageGroup.id)
             .join(User, User.id == Subscription.user_id)
+            .join(ProviderMetaData, OutageGroup.provider == ProviderMetaData.provider)
             .where(User.telegram_id==telegram_id)
         )
         return list(result.all())

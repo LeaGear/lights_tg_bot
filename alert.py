@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from storage import load
-from data.config import PROVIDERS, GROUPS, KYIV_TZ
+from data.config import GROUPS, KYIV_TZ
 
 
 def optimize_schedule_for_alert(schedule):

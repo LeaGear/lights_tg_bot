@@ -10,15 +10,10 @@ DB_URL = os.getenv("DB_PSQL_URL")
 API_URL = "https://app.yasno.ua/api/blackout-service/public/shutdowns/regions/3/dsos/{code}/planned-outages"
 
 PROVIDERS_CODE = {
-    "CEK":  "303",
-    "DTEK": "301"
+    "ЦЕК":  "303",
+    "ДТЕК": "301"
 }
-LOCALIZATION = {
-    "DTEK" : "ДТЕК",
-    "CEK" : "ЦЕК",
-    "ДТЕК" : "DTEK",
-    "ЦЕК" : "CEK"
-}
+
 MESSAGE_HEADERS ={
     "actual_schedule" : "️⚡️⚡️Графік за твоїми підписками!⚡️⚡️\n\n\n",
     "changed_schedule" : "❗❗УВАГА❗❗\n"

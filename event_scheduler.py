@@ -13,8 +13,8 @@ async def _notify_updated_groups(groups_list: list[dict]):
 
 async def parser_scheduler():
 
-    dtek_changed_groups = await parsing_data_from_yasno_service("DTEK")
-    cek_changed_groups = await parsing_data_from_yasno_service("CEK")
+    dtek_changed_groups = await parsing_data_from_yasno_service("ДТЕК")
+    cek_changed_groups = await parsing_data_from_yasno_service("ЦЕК")
     updated_groups = dtek_changed_groups + cek_changed_groups
     if not updated_groups:
         return
