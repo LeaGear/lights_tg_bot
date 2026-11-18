@@ -14,12 +14,19 @@ PROVIDERS_CODE = {
     "ДТЕК": "301"
 }
 
-MESSAGE_HEADERS ={
+MESSAGE_HEADERS = {
     "actual_schedule" : "️⚡️⚡️Графік за твоїми підписками!⚡️⚡️\n\n\n",
     "changed_schedule" : "❗❗УВАГА❗❗\n"
                          "❗ГРАФІК НА СЬОГОДНІ ЗМІНИВСЯ!❗\n\n\n",
+    "subs_list" : "📜Ось список груп за якими ти слідкуєш!📜\n"
 
 }
+OUTAGE_STATUS = {
+    "regular" : "ScheduleApplies",
+    "emergency" : "EmergencyShutdowns",
+    "waiting" : "WaitingForSchedule"
+}
+
 GROUPS = ["1.1", "1.2", "2.1", "2.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2", "6.1", "6.2"]
 KYIV_TZ = pytz.timezone('Europe/Kyiv')
 

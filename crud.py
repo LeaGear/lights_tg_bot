@@ -89,7 +89,6 @@ async def update_today_schedule_info_db(package: list[dict]) -> list[dict]:
             if group.today_schedule_hash != items["data_hash"]:
                 group.today_schedule_json = items["data_json"]
                 group.today_schedule_hash = items["data_hash"]
-                group.schedule_actuality = items["actuality"]
                 changed.append({
                     "provider": items["provider"],
                     "queue": items["queue"]
@@ -97,6 +96,15 @@ async def update_today_schedule_info_db(package: list[dict]) -> list[dict]:
 
         await session.commit()
         return changed
+
+async def update_provider_metadata_db(provider_name, updated_on, is_emergency):
+    async with session_factory() as session:
+        provider = await session.scalar(select(ProviderMetaData).where(ProviderMetaData.provider == provider_name))
+
+        provider.is_emergency_shutdown = is_emergency
+        provider.schedule_updated_time = updated_on
+        await session.commit()
+
 
 async def get_data_for_notify_db(groups_list: list[dict]) -> list[dict]:
     pairs = [(g["provider"], g["queue"]) for g in groups_list]
@@ -111,7 +119,6 @@ async def get_data_for_notify_db(groups_list: list[dict]) -> list[dict]:
                 OutageGroup.queue,
                 OutageGroup.today_schedule_json,
                 OutageGroup.today_schedule_hash,
-                OutageGroup.schedule_actuality,
             )
             .select_from(OutageGroup)
             .join(Subscription, Subscription.group_id == OutageGroup.id)
@@ -122,3 +129,8 @@ async def get_data_for_notify_db(groups_list: list[dict]) -> list[dict]:
             )
         )
     return [dict(r._mapping) for r in rows]
+
+async def get_providers_update_time_db():
+    async with session_factory() as session:
+        rows = await session.execute(select(ProviderMetaData.provider, ProviderMetaData.schedule_updated_time))
+        return list(rows.all())

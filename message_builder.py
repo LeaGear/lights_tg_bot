@@ -33,7 +33,7 @@ def schedule_constructor(frst_msg, schedule, message, reserve):
     return finish_alert
 
 
-def builder_for_notification(sched_ch, users, date):
+def builder_for_notification(sched_ch, users, date, header=""):
     final_list = []
     header = ("❗❗УВАГА❗❗\n"
               "❗ГРАФІК НА СЬОГОДНІ ЗМІНИВСЯ!❗\n"
@@ -58,12 +58,12 @@ def builder_for_notification(sched_ch, users, date):
 
 # <<<<<<<<<<< NEW FUNCTION FOR UPDATED BOT >>>>>>>>>
 
-def _json_schedule_parser(schedule) -> str | None:
-    if schedule is None:
+def _json_schedule_parser(slots) -> str | None:
+    if slots is None:
         return "⚡ Наразі немає інформації про відключення ⚡"
 
     result = ""
-    slots = schedule.get("slots",  "")
+    #slots = schedule.get("slots",  "")
     if not slots:
         return "⚡ Наразі немає інформації про відключення ⚡"
 
@@ -80,9 +80,8 @@ def _time_zone_builder(start, end):
                     f"{'0'if (end/60) < 10 else''}{int(end/60)}{':00'if end % 60 == 0 else':30' }\n")
     return zone
 
-async def build_groups_message(user_groups):
+async def build_groups_message(user_groups, header=""):
     result = ""
-    header = "📜Ось список груп за якими ти слідкуєш!📜\n"
     result += header
 
     for group_data in user_groups:
@@ -91,12 +90,20 @@ async def build_groups_message(user_groups):
     result = result[:-2]
     return result
 
-async def build_schedule_message(provider, queue, schedule_json, actual_date):
+async def build_schedule_message(provider, queue, schedule_json):
     message = (f"💡Група: {provider}-{queue}💡\n\n"
             #f"Графік відключень на сьогодні:\n"
                 f"{_json_schedule_parser(schedule_json)}\n"
-                f"❇️Час оновлення графіка: {actual_date.strftime('%d.%m.%Y %H:%M:%S')}\n\n")
+                )
     return message
+
+async def construct_message_footer(dtek_datetime=None, cek_datetime=None) -> str:
+    footer = ""
+    if dtek_datetime is not None:
+        footer += f"❇️Актуальність графіка ДТЕК: {dtek_datetime.strftime('%d.%m.%Y %H:%M:%S')}\n"
+    if cek_datetime is not None:
+        footer += f"❇️Актуальність графіка ЦЕК: {cek_datetime.strftime('%d.%m.%Y %H:%M:%S')}\n"
+    return footer
 
 async def construct_full_message(header="", body="", footer="") -> str:
     result = header + body + footer

@@ -1,5 +1,5 @@
 from storage import get_all_users
-from data.config import GROUPS
+from data.config import GROUPS, MESSAGE_HEADERS
 from message_builder import builder_for_notification
 
 
@@ -37,7 +37,8 @@ async def updates(provider, last_state, current_data):
         #print(notify_for_user)
 
         return builder_for_notification(diff_schedule, notify_for_user,
-                                        current_data.get("1.1", {}).get("today", {}).get("date", "No data")[:10].split("-"))
+                                        current_data.get("1.1", {}).get("today", {}).get("date", "No data")[:10].split("-"),
+                                        header=MESSAGE_HEADERS["changed_schedule"])
             #return diff_schedule
     else:
         return []

@@ -50,7 +50,6 @@ class OutageGroup(Base):
     queue : Mapped[str] = mapped_column(String(10))
     today_schedule_hash : Mapped[str | None] = mapped_column(String(64))
     today_schedule_json : Mapped[dict | None] = mapped_column(JSONB)
-    schedule_actuality : Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
