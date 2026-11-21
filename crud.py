@@ -1,4 +1,4 @@
-from sqlalchemy import select, delete, tuple_
+from sqlalchemy import select, delete, update, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from database import session_factory, User, OutageGroup, Subscription, ProviderMetaData
 from exceptions import UnknownGroupError
@@ -141,3 +141,16 @@ async def get_users_tg_id_list_db() -> list[int]:
     async with session_factory() as session:
         rows = await session.scalars(select(User.telegram_id).distinct())
         return list(rows.all())
+
+async def update_users_last_notify_hash_db(notified_users):
+    async with session_factory() as session:
+
+        for user_updated_groups_list in notified_users:
+            for subs in user_updated_groups_list:
+                await session.execute(
+                    update(Subscription)
+                    .where(Subscription.user_id == subs["user_id"],
+                           Subscription.group_id == subs["group_id"])
+                    .values(last_notified_hash=subs["new_hash"])
+                )
+        await session.commit()

@@ -59,7 +59,7 @@ def builder_for_notification(sched_ch, users, date, header=""):
 # <<<<<<<<<<< NEW FUNCTION FOR UPDATED BOT >>>>>>>>>
 
 def _json_schedule_parser(slots) -> str | None:
-    print(slots)
+    #print(slots)
     if slots is None:
         return "⚡ Наразі немає інформації про відключення ⚡\n"
 
@@ -100,9 +100,9 @@ async def build_schedule_body(provider, queue, schedule_json):
 async def construct_message_footer(dtek_datetime=None, cek_datetime=None) -> str:
     footer = ""
     if dtek_datetime is not None:
-        footer += f"❇️Актуальність графіка ДТЕК: {dtek_datetime.strftime('%d.%m.%Y %H:%M')}\n"
+        footer += f"❇️Актуальність графіка ДТЕК: {dtek_datetime.astimezone(KYIV_TZ).strftime('%d.%m.%Y %H:%M')}\n"
     if cek_datetime is not None:
-        footer += f"❇️Актуальність графіка ЦЕК: {cek_datetime.strftime('%d.%m.%Y %H:%M')}\n"
+        footer += f"❇️Актуальність графіка ЦЕК: {cek_datetime.astimezone(KYIV_TZ).strftime('%d.%m.%Y %H:%M')}\n"
     return footer
 
 async def construct_full_message(header="", body="", footer="") -> str:

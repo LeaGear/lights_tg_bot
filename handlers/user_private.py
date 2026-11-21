@@ -36,6 +36,7 @@ async def user_groups(message : types.Message):
 @user_private_router.message(F.text == "🗓 Графік") #UPDATED
 async def user_schedule(message : types.Message):
     answer_message = await get_message_user_schedule_service(message.from_user.id)
+    print("user_private ---> ",answer_message)
     if not answer_message:
         await message.answer("🟡 Ти не обрав жодної групи 🟡", reply_markup=start_kb)
     await message.answer(answer_message, reply_markup=start_kb)
