@@ -3,11 +3,12 @@ import hashlib
 
 from datetime import datetime
 
-from data.config import MESSAGE_HEADERS, KYIV_TZ, OUTAGE_STATUS
+from data.config import MESSAGE_HEADERS, OUTAGE_STATUS, MESSAGE_TEMPLATES
+from bot_instance import bot
 from crud import (add_user_db, get_user_groups_db, add_user_subs_db,
                   delete_user_subscription_db, delete_all_user_subscriptions_db, update_today_schedule_info_db,
-                  get_data_for_notify_db, update_provider_metadata_db, get_providers_update_time_db)
-from message_builder import build_groups_message, build_schedule_message, construct_full_message, construct_message_footer
+                  get_data_for_notify_db, update_provider_metadata_db, get_providers_update_time_db, get_users_tg_id_list_db)
+from message_builder import build_groups_message, build_schedule_body, construct_full_message, construct_message_footer
 from exceptions import UnknownGroupError
 from yasno_parser import get_provider_schedule_from_api
 
@@ -15,15 +16,6 @@ from yasno_parser import get_provider_schedule_from_api
 def _calculate_schedule_data_hash(schedule_data: dict) -> str:
     json_str = json.dumps(schedule_data, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(json_str.encode('utf-8')).hexdigest()
-
-async def _data_fot_footer_service() -> dict[str, str]:
-    provider_datetime = {}
-    data = await get_providers_update_time_db()
-    for provider in data:
-        provider_datetime[provider.provider] = provider.schedule_updated_time
-
-    print(provider_datetime)
-    return provider_datetime
 
 async def add_user_service(tg_id: int):
     user = await add_user_db(telegram_id=tg_id)
@@ -48,13 +40,13 @@ async def get_message_user_schedule_service(tg_id: int) -> str | None:
     if not user_groups:
         return None
     for user_group in user_groups:
-        temp = await build_schedule_message(
+        temp = await build_schedule_body(
             provider=user_group.provider,
             queue=user_group.queue,
             schedule_json=user_group.today_schedule_json
         )
         body += temp
-    providers_datetime = await _data_fot_footer_service()
+    providers_datetime = await get_providers_update_time_db()
     footer = await construct_message_footer(dtek_datetime=providers_datetime["ДТЕК"], cek_datetime=providers_datetime["ЦЕК"])
     message = await construct_full_message(header=MESSAGE_HEADERS["actual_schedule"], body=body, footer=footer)
     return message
@@ -99,23 +91,34 @@ async def update_today_schedule_info_service(provider, data):
 
     return await update_today_schedule_info_db(update_package)
 
-async def update_provider_metadata_service(provider_name, data):
+async def update_provider_metadata_service(provider_name, data) -> dict:
     updated_on = data.get("1.1").get("updatedOn")
     updated_time = datetime.fromisoformat(updated_on)
     outage_status = data.get("1.1").get("today").get("status")
     if outage_status == OUTAGE_STATUS["emergency"]:
-        await update_provider_metadata_db(provider_name, updated_time, is_emergency=True)
+        emergency_status = True
     else:
-        await update_provider_metadata_db(provider_name, updated_time, is_emergency=False)
+        emergency_status = False
+    old_emergency_value = await update_provider_metadata_db(provider_name, updated_time, is_emergency=emergency_status)
 
+    return {
+        "is_emergency_on": (not old_emergency_value and emergency_status),
+        "is_emergency_continue" : old_emergency_value and emergency_status
+    }
 
-async def parsing_data_from_yasno_service(provider_name) -> list[dict]:
+async def parsing_data_from_yasno_service(provider_name) -> dict:
     data = await get_provider_schedule_from_api(provider_name)
     if data is None:
         raise Exception(f"Provider {provider_name} API error")
-    await update_provider_metadata_service(provider_name=provider_name, data=data)
-    queue_changed = await update_today_schedule_info_service(provider=provider_name, data=data)
-    return queue_changed
+
+    provider_status = await update_provider_metadata_service(provider_name=provider_name, data=data)
+    if provider_status.get("is_emergency_continue") or provider_status.get("is_emergency_on"):
+        queue_changed = []
+    else:
+        queue_changed = await update_today_schedule_info_service(provider=provider_name, data=data)
+
+    provider_status["queue_changed"] = queue_changed
+    return provider_status
 
 async def get_full_data_for_notify_service(groups_list: list[dict]) -> dict:
     answer = {}
@@ -126,7 +129,7 @@ async def get_full_data_for_notify_service(groups_list: list[dict]) -> dict:
 
     for notify in actual_data:
         user_tg_id = str(notify["telegram_id"])
-        message_body = await build_schedule_message(
+        message_body = await build_schedule_body(
             provider=notify["provider"],
             queue=notify["queue"],
             schedule_json=notify["today_schedule_json"]
@@ -145,4 +148,20 @@ async def get_full_data_for_notify_service(groups_list: list[dict]) -> dict:
 
     return answer
 
+async def notify_updated_groups(groups_list: list[dict]):
+    notified_users = {}
+    notify_list = await get_full_data_for_notify_service(groups_list)
+    for tg_id ,value in notify_list.items():
+        await bot.send_message(tg_id, value["message"])
+        notified_users[tg_id] = value["new_hash"]
 
+    #update last_notified_hash
+
+async def emergency_outage_notification_service():
+    all_users = await get_users_tg_id_list_db()
+    emergency_message = MESSAGE_TEMPLATES["emergency_outage"]
+    for user_tg_id in all_users:
+        try:
+            bot.send_message(user_tg_id, emergency_message)
+        except Exception as e:
+            print(e)

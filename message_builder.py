@@ -59,19 +59,19 @@ def builder_for_notification(sched_ch, users, date, header=""):
 # <<<<<<<<<<< NEW FUNCTION FOR UPDATED BOT >>>>>>>>>
 
 def _json_schedule_parser(slots) -> str | None:
+    print(slots)
     if slots is None:
-        return "⚡ Наразі немає інформації про відключення ⚡"
+        return "⚡ Наразі немає інформації про відключення ⚡\n"
 
     result = ""
-    #slots = schedule.get("slots",  "")
-    if not slots:
-        return "⚡ Наразі немає інформації про відключення ⚡"
 
     for slot in slots:
         if slot["type"] == "Definite":
             start = slot["start"]
             end = slot["end"]
             result += _time_zone_builder(start, end)
+    if not result:
+        return "⚡ Наразі немає інформації про відключення ⚡\n"
 
     return result
 
@@ -90,7 +90,7 @@ async def build_groups_message(user_groups, header=""):
     result = result[:-2]
     return result
 
-async def build_schedule_message(provider, queue, schedule_json):
+async def build_schedule_body(provider, queue, schedule_json):
     message = (f"💡Група: {provider}-{queue}💡\n\n"
             #f"Графік відключень на сьогодні:\n"
                 f"{_json_schedule_parser(schedule_json)}\n"
@@ -100,9 +100,9 @@ async def build_schedule_message(provider, queue, schedule_json):
 async def construct_message_footer(dtek_datetime=None, cek_datetime=None) -> str:
     footer = ""
     if dtek_datetime is not None:
-        footer += f"❇️Актуальність графіка ДТЕК: {dtek_datetime.strftime('%d.%m.%Y %H:%M:%S')}\n"
+        footer += f"❇️Актуальність графіка ДТЕК: {dtek_datetime.strftime('%d.%m.%Y %H:%M')}\n"
     if cek_datetime is not None:
-        footer += f"❇️Актуальність графіка ЦЕК: {cek_datetime.strftime('%d.%m.%Y %H:%M:%S')}\n"
+        footer += f"❇️Актуальність графіка ЦЕК: {cek_datetime.strftime('%d.%m.%Y %H:%M')}\n"
     return footer
 
 async def construct_full_message(header="", body="", footer="") -> str:

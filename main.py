@@ -163,6 +163,7 @@ async def main():
 
     #TEST
     #scheduler.add_job(parser_scheduler, 'interval', minutes=PARSER_REFRESH_INTERVAL_IN_MINUTES)
+    await parser_scheduler() # init calling parser
     scheduler.add_job(parser_scheduler, 'interval', seconds=20)
 
     scheduler.start()

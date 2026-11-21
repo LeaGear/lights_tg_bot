@@ -97,14 +97,16 @@ async def update_today_schedule_info_db(package: list[dict]) -> list[dict]:
         await session.commit()
         return changed
 
-async def update_provider_metadata_db(provider_name, updated_on, is_emergency):
+async def update_provider_metadata_db(provider_name, updated_on, is_emergency) -> bool:
     async with session_factory() as session:
         provider = await session.scalar(select(ProviderMetaData).where(ProviderMetaData.provider == provider_name))
+        old_emergency_value = provider.is_emergency_shutdown
 
         provider.is_emergency_shutdown = is_emergency
         provider.schedule_updated_time = updated_on
         await session.commit()
 
+        return old_emergency_value
 
 async def get_data_for_notify_db(groups_list: list[dict]) -> list[dict]:
     pairs = [(g["provider"], g["queue"]) for g in groups_list]
@@ -130,7 +132,12 @@ async def get_data_for_notify_db(groups_list: list[dict]) -> list[dict]:
         )
     return [dict(r._mapping) for r in rows]
 
-async def get_providers_update_time_db():
+async def get_providers_update_time_db() -> dict[str, str]:
     async with session_factory() as session:
         rows = await session.execute(select(ProviderMetaData.provider, ProviderMetaData.schedule_updated_time))
+        return {provider : updated_at for provider, updated_at in rows}
+
+async def get_users_tg_id_list_db() -> list[int]:
+    async with session_factory() as session:
+        rows = await session.scalars(select(User.telegram_id).distinct())
         return list(rows.all())

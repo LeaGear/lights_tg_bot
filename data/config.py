@@ -21,6 +21,11 @@ MESSAGE_HEADERS = {
     "subs_list" : "📜Ось список груп за якими ти слідкуєш!📜\n"
 
 }
+
+MESSAGE_TEMPLATES = {
+    "emergency_outage" : "🚨 ЗАПРОВАДЖЕНІ ЕКСТРЕНІ ВІДКЛЮЧЕННЯ 🚨\nГрафіки не діють!"
+}
+
 OUTAGE_STATUS = {
     "regular" : "ScheduleApplies",
     "emergency" : "EmergencyShutdowns",
